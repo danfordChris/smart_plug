@@ -1,0 +1,43 @@
+name: smart_power
+description: "Smart Power — control and monitor SonOFF smart plugs via Home Assistant."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # HTTP client for Home Assistant REST API
+  dio: ^5.4.0
+
+  # Secure storage for HA URL + access token
+  flutter_secure_storage: ^9.0.0
+
+  # Optional WebSocket transport for live HA state updates
+  web_socket_channel: ^2.4.0
+
+  # Charts: sparklines + weekly bar chart
+  fl_chart: ^0.66.0
+
+  # Typography (Outfit + DM Sans + JetBrains Mono)
+  google_fonts: ^6.1.0
+
+  # Number / date / currency formatting
+  intl: ^0.19.0
+  hugeicons: ^1.1.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

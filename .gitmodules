@@ -1,0 +1,3 @@
+[submodule "ai/workflow-contract"]
+	path = ai/workflow-contract
+	url = git@github.com:iPFSoftwares/workflow-contract.git
