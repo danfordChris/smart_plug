@@ -1,13 +1,13 @@
 # Smart Power
 
-Flutter mobile app for monitoring and controlling SonOFF smart plugs through Home Assistant.
+Flutter mobile app for monitoring and controlling SonOFF smart plugs through Plug Assistance.
 
 Strict 1:1 implementation of `implementation_plan/mobile_design_docs/` — design tokens,
 widget mapping, per-screen specs, fl_chart configs, and acceptance criteria from
 `Flutter Handoff.md` (Material 3, Outfit + DM Sans typography, forest-green seed
 `#1F8A5B`).
 
-This app talks directly to a self-hosted Home Assistant instance over the local
+This app talks directly to a self-hosted Plug Assistance instance over the local
 network or Tailscale VPN. There is no cloud backend.
 
 ---
@@ -33,18 +33,18 @@ network or Tailscale VPN. There is no cloud backend.
 
 - Flutter 3.35+ on the stable channel
 - iOS 13+ / Android API 23+
-- A Home Assistant instance reachable on the same network or via Tailscale
-- A long-lived access token from Home Assistant
+- A Plug Assistance instance reachable on the same network or via Tailscale
+- A long-lived access token from Plug Assistance
 
 ---
 
-## Generating a Home Assistant token
+## Generating a Plug Assistance token
 
-1. Open Home Assistant in a browser.
+1. Open Plug Assistance in a browser.
 2. Click your **profile** (bottom-left avatar).
 3. Go to **Security → Long-Lived Access Tokens → Create Token**.
 4. Name it `Smart Power`.
-5. Copy the token immediately — Home Assistant only shows it once.
+5. Copy the token immediately — Plug Assistance only shows it once.
 6. Paste it into the app's Setup screen.
 
 ---
@@ -195,12 +195,12 @@ lib/
 The app **does not** include:
 
 - Multi-user accounts or cloud sync
-- Push notifications (Home Assistant Companion App or HA notifications handle that)
-- Automation editing (use Home Assistant's web UI)
+- Push notifications (Plug Assistance Companion App or HA notifications handle that)
+- Automation editing (use Plug Assistance's web UI)
 - History older than the in-memory 60-point sparkline (use HA's Energy dashboard)
 - In-app SonOFF pairing (use eWeLink — the app discovers automatically)
 
-If the operator requests one of these, point them to Home Assistant's web UI.
+If the operator requests one of these, point them to Plug Assistance's web UI.
 
 ---
 

@@ -8,6 +8,7 @@ import '../config/theme.dart';
 import '../models/plug.dart';
 import '../providers/plugs_provider.dart';
 import '../providers/settings_provider.dart';
+import '../utils/snackbars.dart';
 import '../widgets/connection_banner.dart';
 import '../widgets/energy_hero_card.dart';
 import '../widgets/insight_card.dart';
@@ -40,6 +41,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final plugsAsync = ref.watch(plugsProvider);
     final settings = ref.watch(settingsProvider).valueOrNull;
+    final source = ref.watch(plugsSourceProvider);
     final scheme = Theme.of(context).colorScheme;
     final hasError = plugsAsync.hasError;
 
@@ -71,6 +73,11 @@ class DashboardScreen extends ConsumerWidget {
                     AppSpacing.xxl,
                   ),
                   children: [
+                    DataSourceBanner(
+                      source: source,
+                      onRetry: () =>
+                          ref.read(plugsProvider.notifier).refresh(),
+                    ),
                     _hero(context, plugsAsync.valueOrNull ?? const []),
                     const SizedBox(height: 22),
                     const SectionHeader(title: 'Quick access'),
@@ -145,13 +152,13 @@ class DashboardScreen extends ConsumerWidget {
         'icon': AppIcons.schedule,
         'label': 'Schedule',
         'tint': _tintSchedule,
-        'onTap': null,
+        'onTap': () => AppSnack.comingSoon(context, 'Scheduling'),
       },
       {
         'icon': AppIcons.wrench,
         'label': 'Maintain',
         'tint': _tintMaintain,
-        'onTap': null,
+        'onTap': () => AppSnack.comingSoon(context, 'Maintenance'),
       },
       {
         'icon': AppIcons.warn,
@@ -163,7 +170,7 @@ class DashboardScreen extends ConsumerWidget {
         'icon': AppIcons.leaf,
         'label': 'Optimize',
         'tint': scheme.primary,
-        'onTap': null,
+        'onTap': () => AppSnack.comingSoon(context, 'Optimization'),
       },
     ];
     return SizedBox(
@@ -209,7 +216,7 @@ class DashboardScreen extends ConsumerWidget {
                   if (!ok && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text("Couldn't reach Home Assistant"),
+                        content: Text("Couldn't reach Plug Assistance"),
                       ),
                     );
                   }
@@ -275,7 +282,7 @@ class DashboardScreen extends ConsumerWidget {
         description:
             'Radio drawing 7.8 W when likely idle — about £1.20/month wasted.',
         action: 'Check now',
-        onTap: () {},
+        onTap: () => AppSnack.comingSoon(context, 'Insights'),
       ),
       const SizedBox(height: 8),
       InsightCard(
@@ -285,7 +292,7 @@ class DashboardScreen extends ConsumerWidget {
         description:
             'Lowest tariff 00:30 – 04:30. Schedule heavy loads to save £0.12.',
         action: 'Save £0.12',
-        onTap: () {},
+        onTap: () => AppSnack.comingSoon(context, 'Insights'),
       ),
       const SizedBox(height: 8),
       InsightCard(
@@ -294,7 +301,7 @@ class DashboardScreen extends ConsumerWidget {
         title: 'Fridge running efficiently',
         description:
             'Compressor cycle is steady at 18 min — within normal range.',
-        onTap: () {},
+        onTap: () => AppSnack.comingSoon(context, 'Insights'),
       ),
     ];
   }
@@ -469,7 +476,7 @@ class _BellWithBadge extends StatelessWidget {
         children: [
           IconButton(
             tooltip: 'Notifications',
-            onPressed: () {},
+            onPressed: () => AppSnack.comingSoon(context, 'Notifications'),
             icon: HugeIcon(
               icon: AppIcons.bell,
               size: 22,

@@ -38,7 +38,7 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               _SettingsRow(
                 icon: AppIcons.link,
-                title: 'Home Assistant',
+                title: 'Plug Assistance',
                 subtitle: url,
                 subtitleMono: true,
                 trailing: _GreenDot(),

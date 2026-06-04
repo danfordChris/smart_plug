@@ -7,6 +7,7 @@ import '../config/theme.dart';
 import '../models/plug.dart';
 import '../providers/plugs_provider.dart';
 import '../utils/formatters.dart';
+import '../utils/snackbars.dart';
 import '../widgets/sparkline.dart';
 import '../widgets/stat_tile.dart';
 
@@ -60,8 +61,9 @@ class DetailScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            tooltip: 'Settings',
-            onPressed: () {},
+            tooltip: 'Device settings',
+            onPressed: () =>
+                AppSnack.comingSoon(context, 'Device configuration'),
             icon: HugeIcon(
               icon: AppIcons.settings,
               size: 22,
@@ -86,6 +88,8 @@ class DetailScreen extends ConsumerWidget {
               _heroIdentity(context, plug, scheme),
               const SizedBox(height: AppSpacing.l),
               _bigSwitchPanel(context, ref, plug),
+              const SizedBox(height: AppSpacing.m),
+              _statusRow(context, plug),
               const SizedBox(height: AppSpacing.l),
               _statGrid(context, plug),
               const SizedBox(height: AppSpacing.l),
@@ -94,6 +98,8 @@ class DetailScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.m),
                 _criticalCard(context, plug.type.label),
               ],
+              const SizedBox(height: AppSpacing.m),
+              _diagnosticsCard(context, plug),
               const SizedBox(height: AppSpacing.m),
               _hintCard(context),
             ],
@@ -227,7 +233,7 @@ class DetailScreen extends ConsumerWidget {
                       if (!ok && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("Couldn't reach Home Assistant"),
+                            content: Text("Couldn't reach Plug Assistance"),
                           ),
                         );
                       }
@@ -246,6 +252,58 @@ class DetailScreen extends ConsumerWidget {
   }
 
   Widget _statGrid(BuildContext context, Plug plug) {
+    // Core 4 are always shown (— when missing). Month/Total/WiFi appear only
+    // when the device actually exposes them, so the grid stays honest.
+    final tiles = <Widget>[
+      StatTile(
+        label: 'Power',
+        value: Fmt.powerValue(plug.powerW),
+        unit: 'W',
+        icon: AppIcons.power,
+        accent: plug.isOn,
+      ),
+      StatTile(
+        label: 'Voltage',
+        value:
+            plug.voltageV == null ? '—' : plug.voltageV!.toStringAsFixed(0),
+        unit: 'V',
+        icon: AppIcons.voltage,
+      ),
+      StatTile(
+        label: 'Current',
+        value:
+            plug.currentA == null ? '—' : plug.currentA!.toStringAsFixed(3),
+        unit: 'A',
+        icon: AppIcons.current,
+      ),
+      StatTile(
+        label: 'Today',
+        value: Fmt.energyValue(plug.energyTodayKwh),
+        unit: 'kWh',
+        icon: AppIcons.energy,
+      ),
+      if (plug.energyMonthKwh != null)
+        StatTile(
+          label: 'This month',
+          value: Fmt.energyValue(plug.energyMonthKwh),
+          unit: 'kWh',
+          icon: AppIcons.energy,
+        ),
+      if (plug.energyTotalKwh != null)
+        StatTile(
+          label: 'Total',
+          value: Fmt.energyValue(plug.energyTotalKwh),
+          unit: 'kWh',
+          icon: AppIcons.energy,
+        ),
+      if (plug.wifiRssiDbm != null)
+        StatTile(
+          label: 'WiFi',
+          value: plug.wifiRssiDbm!.toStringAsFixed(0),
+          unit: 'dBm',
+          icon: AppIcons.wifi,
+        ),
+    ];
     return GridView.count(
       crossAxisCount: 2,
       mainAxisSpacing: AppSpacing.m,
@@ -253,37 +311,237 @@ class DetailScreen extends ConsumerWidget {
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       childAspectRatio: 1.45,
+      children: tiles,
+    );
+  }
+
+  /// Availability + last-seen strip. Surfaces online/offline plus when the
+  /// state was last refreshed and last changed (HA `last_updated`/`last_changed`).
+  Widget _statusRow(BuildContext context, Plug plug) {
+    final scheme = Theme.of(context).colorScheme;
+    final online = !plug.isUnavailable;
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.l,
+        vertical: AppSpacing.m,
+      ),
+      child: Row(
+        children: [
+          _statusChip(
+            context,
+            icon: online ? AppIcons.wifi : AppIcons.cloudOff,
+            label: online ? 'Online' : 'Offline',
+            color: online ? AppStatus.success : scheme.error,
+          ),
+          const Spacer(),
+          _statusMeta(context, 'Updated', Fmt.relative(plug.lastUpdated)),
+          const SizedBox(width: AppSpacing.l),
+          _statusMeta(context, 'Changed', Fmt.relative(plug.lastChanged)),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusChip(
+    BuildContext context, {
+    required dynamic icon,
+    required String label,
+    required Color color,
+  }) {
+    return Row(
       children: [
-        StatTile(
-          label: 'Power',
-          value: Fmt.powerValue(plug.powerW),
-          unit: 'W',
-          icon: AppIcons.power,
-          accent: plug.isOn,
-        ),
-        StatTile(
-          label: 'Voltage',
-          value: plug.voltageV == null
-              ? '—'
-              : plug.voltageV!.toStringAsFixed(0),
-          unit: 'V',
-          icon: AppIcons.voltage,
-        ),
-        StatTile(
-          label: 'Current',
-          value: plug.currentA == null
-              ? '—'
-              : plug.currentA!.toStringAsFixed(3),
-          unit: 'A',
-          icon: AppIcons.current,
-        ),
-        StatTile(
-          label: 'Today',
-          value: Fmt.energyValue(plug.energyTodayKwh),
-          unit: 'kWh',
-          icon: AppIcons.energy,
+        HugeIcon(icon: icon, size: 16, color: color),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
         ),
       ],
+    );
+  }
+
+  Widget _statusMeta(BuildContext context, String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                letterSpacing: 0.5,
+                fontSize: 10,
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: AppTheme.monoStyle(scheme).copyWith(fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  /// Collapsible diagnostics: every matched sensor's raw value + each
+  /// entity's full HA attribute map. Full transparency — nothing hidden.
+  Widget _diagnosticsCard(BuildContext context, Plug plug) {
+    final scheme = Theme.of(context).colorScheme;
+    final readings = plug.readings.values.toList()
+      ..sort((a, b) => a.entityId.compareTo(b.entityId));
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.l,
+            vertical: 2,
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.l,
+            0,
+            AppSpacing.l,
+            AppSpacing.l,
+          ),
+          leading: HugeIcon(
+            icon: AppIcons.wrench,
+            size: 18,
+            color: scheme.onSurfaceVariant,
+          ),
+          title: Text(
+            'Diagnostics',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontSize: 15,
+                ),
+          ),
+          subtitle: Text(
+            '${readings.length} sensor${readings.length == 1 ? '' : 's'} · '
+            'raw Plug Assistance data',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+          ),
+          children: [
+            // The backing switch entity.
+            _entityBlock(
+              context,
+              title: plug.name,
+              entityId: plug.entityId,
+              valueLine: plug.isUnavailable
+                  ? 'unavailable'
+                  : (plug.isOn ? 'on' : 'off'),
+              attributes: plug.attributes,
+            ),
+            for (final r in readings) ...[
+              const SizedBox(height: AppSpacing.s),
+              _entityBlock(
+                context,
+                title: r.friendlyName ?? r.entityId,
+                entityId: r.entityId,
+                valueLine: r.display,
+                attributes: r.attributes,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _entityBlock(
+    BuildContext context, {
+    required String title,
+    required String entityId,
+    required String valueLine,
+    required Map<String, dynamic> attributes,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final keys = attributes.keys.toList()..sort();
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.m),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s),
+              Text(
+                valueLine,
+                style: AppTheme.monoStyle(scheme).copyWith(
+                  fontSize: 12,
+                  color: scheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            entityId,
+            style: AppTheme.monoStyle(scheme).copyWith(
+              fontSize: 11,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          if (keys.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s),
+            for (final k in keys) _kvRow(context, k, attributes[k]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _kvRow(BuildContext context, String key, Object? value) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              key,
+              style: AppTheme.monoStyle(scheme).copyWith(
+                fontSize: 11,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s),
+          Expanded(
+            child: Text(
+              '$value',
+              style: AppTheme.monoStyle(scheme).copyWith(fontSize: 11),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -439,7 +697,7 @@ class DetailScreen extends ConsumerWidget {
           const SizedBox(width: AppSpacing.s),
           Expanded(
             child: Text(
-              'Name and icon mirror what you set in Home Assistant. Edit the '
+              'Name and icon mirror what you set in Plug Assistance. Edit the '
               'entity there and changes show up after a refresh.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,

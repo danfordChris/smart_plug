@@ -9,6 +9,17 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # Incomplete WIP not wired into the app and unrelated to the live plug-data
+    # work. They reference packages absent from pubspec (mobile_scanner,
+    # flutter_web_auth_2) or methods that don't exist yet. Excluded so
+    # `flutter analyze` reflects the shipping app; delete these entries once the
+    # features are completed.
+    - lib/screens/qr_pair_screen.dart
+    - lib/services/ha_oauth.dart
+    - lib/widgets/configure_device_sheet.dart
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

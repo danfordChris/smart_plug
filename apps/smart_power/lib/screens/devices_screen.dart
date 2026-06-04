@@ -5,13 +5,14 @@ import 'package:hugeicons/hugeicons.dart';
 import '../config/app_icons.dart';
 import '../config/theme.dart';
 import '../providers/plugs_provider.dart';
+import '../widgets/connection_banner.dart';
 import '../widgets/plug_card.dart';
 import 'detail_screen.dart';
 
 /// Devices — mirrors `DevicesScreen` in
 /// `implementation_plan/mobile_design_docs/screens.jsx` (lines 943-974).
 ///
-/// AppBar "Devices" · "X of Y on · synced from Home Assistant" subtitle ·
+/// AppBar "Devices" · "X of Y on · synced from Plug Assistance" subtitle ·
 /// plug cards · "use the + tab" footer card.
 class DevicesScreen extends ConsumerWidget {
   const DevicesScreen({super.key});
@@ -19,6 +20,7 @@ class DevicesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(plugsProvider);
+    final source = ref.watch(plugsSourceProvider);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -53,10 +55,16 @@ class DevicesScreen extends ConsumerWidget {
                 parent: BouncingScrollPhysics(),
               ),
               children: [
+                DataSourceBanner(
+                  source: source,
+                  onRetry: () => ref.read(plugsProvider.notifier).refresh(),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
                   child: Text(
-                    '$onCount of ${plugs.length} on · synced from Home Assistant',
+                    source.isDemo
+                        ? '$onCount of ${plugs.length} on · demo data'
+                        : '$onCount of ${plugs.length} on · synced from Plug Assistance',
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
@@ -77,7 +85,7 @@ class DevicesScreen extends ConsumerWidget {
                       if (!ok && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("Couldn't reach Home Assistant"),
+                            content: Text("Couldn't reach Plug Assistance"),
                           ),
                         );
                       }

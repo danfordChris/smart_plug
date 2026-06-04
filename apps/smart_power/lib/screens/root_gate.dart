@@ -6,7 +6,7 @@ import 'home_scaffold.dart';
 import 'setup_screen.dart';
 
 /// When true, the app shows the dashboard with seeded demo data even though
-/// no Home Assistant instance is configured. Toggled by the "Preview with
+/// no Plug Assistance instance is configured. Toggled by the "Preview with
 /// demo data" button on the Setup screen — useful for design review.
 final previewModeProvider = StateProvider<bool>((_) => false);
 

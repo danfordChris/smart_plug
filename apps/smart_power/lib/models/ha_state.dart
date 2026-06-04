@@ -1,4 +1,4 @@
-/// Raw Home Assistant `/api/states/<entity_id>` response.
+/// Raw Plug Assistance `/api/states/<entity_id>` response.
 ///
 /// Shape per HA docs:
 /// {

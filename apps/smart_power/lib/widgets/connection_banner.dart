@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../config/app_icons.dart';
 import '../config/theme.dart';
+import '../providers/plugs_provider.dart';
 
 /// ConnectionBanner — mirrors `.banner` in styles.css.
 /// Red error-container bar with cloud-off icon, message, and Retry button.
@@ -34,7 +35,7 @@ class ConnectionBanner extends StatelessWidget {
               const SizedBox(width: AppSpacing.s),
               Expanded(
                 child: Text(
-                  "Disconnected — couldn't reach Home Assistant",
+                  "Disconnected — couldn't reach Plug Assistance",
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
@@ -51,6 +52,97 @@ class ConnectionBanner extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Inline banner that explains when the list is showing demo/preview data
+/// instead of live plugs — so the operator is never misled into thinking a
+/// failed match "worked". Returns an empty box when the source is [live].
+class DataSourceBanner extends StatelessWidget {
+  final PlugsSource source;
+  final VoidCallback onRetry;
+  const DataSourceBanner({
+    super.key,
+    required this.source,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (source == PlugsSource.live) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+
+    late final Color bg;
+    late final Color fg;
+    late final dynamic icon;
+    late final String message;
+    var showRetry = true;
+
+    switch (source) {
+      case PlugsSource.demoEmpty:
+        bg = scheme.errorContainer;
+        fg = scheme.onErrorContainer;
+        icon = AppIcons.alert;
+        message = 'Connected to Plug Assistance, but no smart plugs were '
+            'found. Check that your Sonoff entities expose power/energy '
+            'sensors, then retry.';
+      case PlugsSource.demoNoBackend:
+        bg = scheme.errorContainer;
+        fg = scheme.onErrorContainer;
+        icon = AppIcons.cloudOff;
+        message = "Showing demo data — couldn't reach Plug Assistance.";
+      case PlugsSource.demoUnconfigured:
+        bg = scheme.secondaryContainer;
+        fg = scheme.onSecondaryContainer;
+        icon = AppIcons.eye;
+        message = 'Preview data — connect a Plug Assistance instance from '
+            'Settings to see your real plugs.';
+        showRetry = false;
+      case PlugsSource.live:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.s,
+        AppSpacing.s,
+        AppSpacing.s,
+        AppSpacing.s,
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        AppSpacing.s,
+        AppSpacing.s,
+        AppSpacing.s,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+      ),
+      child: Row(
+        children: [
+          HugeIcon(icon: icon, size: 18, color: fg),
+          const SizedBox(width: AppSpacing.s),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: fg, height: 1.4),
+            ),
+          ),
+          if (showRetry) ...[
+            const SizedBox(width: AppSpacing.s),
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(foregroundColor: fg),
+              child: const Text('Retry'),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -116,7 +116,7 @@ class _AddDeviceSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.s),
             Text(
               'Pair new SonOFF plugs in the eWeLink app, then add them to '
-              'Home Assistant via the SonOFF LAN integration. They show up '
+              'Plug Assistance via the SonOFF LAN integration. They show up '
               'here automatically.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,

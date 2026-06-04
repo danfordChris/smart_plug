@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import '../config/constants.dart';
 import '../models/ha_state.dart';
 
-/// Thin client for Home Assistant's REST API.
+/// Thin client for Plug Assistance's REST API.
 ///
 /// Endpoints used (Handoff §1 / per-screen specs):
 ///   `GET  /api/`                                — auth + health check

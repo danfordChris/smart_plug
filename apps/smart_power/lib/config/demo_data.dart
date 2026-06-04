@@ -6,7 +6,7 @@ import '../models/plug.dart';
 /// `implementation_plan/mobile_design_docs/app.jsx` (lines 18-55).
 ///
 /// Used as a fallback so the dashboard renders fully even before a live
-/// Home Assistant fetch succeeds (or when the backend is unreachable during
+/// Plug Assistance fetch succeeds (or when the backend is unreachable during
 /// design review). Once a real fetch returns plugs, these are replaced.
 class DemoData {
   DemoData._();
@@ -42,8 +42,18 @@ class DemoData {
         voltageV: 229.4,
         currentA: 0.036,
         energyTodayKwh: 0.18,
+        energyMonthKwh: 4.7,
+        energyTotalKwh: 63.4,
+        wifiRssiDbm: -42,
         lastUpdated: now,
+        lastChanged: now.subtract(const Duration(hours: 3, minutes: 12)),
         history: _radioHistory(),
+        attributes: const {
+          'friendly_name': 'Radio',
+          'device_class': 'outlet',
+          'icon': 'mdi:radio',
+        },
+        readings: _readings('radio', 8.2, 229.4, 0.036, 0.18, -42),
       ),
       Plug(
         id: 'fridge',
@@ -55,10 +65,52 @@ class DemoData {
         voltageV: 229.1,
         currentA: 0.544,
         energyTodayKwh: 1.42,
+        energyMonthKwh: 38.9,
+        energyTotalKwh: 512.7,
+        wifiRssiDbm: -47,
         lastUpdated: now,
+        lastChanged: now.subtract(const Duration(minutes: 6)),
         history: _fridgeHistory(),
+        attributes: const {
+          'friendly_name': 'Fridge',
+          'device_class': 'outlet',
+          'icon': 'mdi:fridge',
+        },
+        readings: _readings('fridge', 124.6, 229.1, 0.544, 1.42, -47),
       ),
     ];
+  }
+
+  /// Builds a SonoffLAN-style raw sensor map for the diagnostics view so demo
+  /// / preview mode exercises the full Detail screen.
+  static Map<String, PlugReading> _readings(
+    String id,
+    double power,
+    double voltage,
+    double current,
+    double energy,
+    double rssi,
+  ) {
+    PlugReading r(String suffix, Object value, String unit, String dc) =>
+        PlugReading(
+          entityId: 'sensor.${id}_$suffix',
+          state: '$value',
+          friendlyName: '$id $suffix',
+          unit: unit,
+          attributes: {
+            'unit_of_measurement': unit,
+            'device_class': dc,
+            'state_class': 'measurement',
+            'friendly_name': '$id $suffix',
+          },
+        );
+    return {
+      'sensor.${id}_power': r('power', power, 'W', 'power'),
+      'sensor.${id}_voltage': r('voltage', voltage, 'V', 'voltage'),
+      'sensor.${id}_current': r('current', current, 'A', 'current'),
+      'sensor.${id}_energy': r('energy', energy, 'kWh', 'energy'),
+      'sensor.${id}_rssi': r('rssi', rssi, 'dBm', 'signal_strength'),
+    };
   }
 
   /// "Other appliances" baseline kWh added to the hero total so the card

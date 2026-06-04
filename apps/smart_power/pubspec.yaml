@@ -1,5 +1,5 @@
 name: smart_power
-description: "Smart Power — control and monitor SonOFF smart plugs via Home Assistant."
+description: "Smart Power — control and monitor SonOFF smart plugs via Plug Assistance."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -15,7 +15,7 @@ dependencies:
   # State management
   flutter_riverpod: ^2.5.1
 
-  # HTTP client for Home Assistant REST API
+  # HTTP client for Plug Assistance REST API
   dio: ^5.4.0
 
   # Secure storage for HA URL + access token

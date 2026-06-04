@@ -8,7 +8,7 @@ import '../config/constants.dart';
 import '../config/theme.dart';
 import '../providers/settings_provider.dart';
 import '../services/ha_api.dart';
-import 'root_gate.dart';
+import 'root_gate.dart'; 
 
 /// Setup / Connection screen — mirrors `SetupScreen` in
 /// `implementation_plan/mobile_design_docs/screens.jsx` (lines 8-180).
@@ -38,7 +38,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     _urlCtrl = TextEditingController(
       text: stored?.haUrl ?? AppConstants.haDefaultUrl,
     );
-    _tokenCtrl = TextEditingController(text: stored?.haToken ?? '');
+    _tokenCtrl = TextEditingController(
+      text: stored?.haToken ?? AppConstants.haDefaultToken,
+    );
   }
 
   @override
@@ -75,7 +77,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       if (!mounted) return;
       setState(() {
         _testResult = _TestResult.ok;
-        _haVersion = config?['version'] as String? ?? 'Home Assistant';
+        _haVersion = config?['version'] as String? ?? 'Plug Assistance';
         _switchCount = entities
             .where((e) =>
                 (e as dynamic).entityId?.toString().startsWith('switch.') ??
@@ -108,7 +110,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       return 'Token rejected (401). Generate a new long-lived token.';
     }
     if (e.response?.statusCode == 404) {
-      return "URL responded but isn't Home Assistant.";
+      return "URL responded but isn't Plug Assistance.";
     }
     return e.message ?? "Couldn't connect.";
   }
@@ -145,7 +147,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   TextField(
                     controller: _urlCtrl,
                     decoration: InputDecoration(
-                      labelText: 'Home Assistant URL',
+                      labelText: 'Plug Assistance URL',
                       helperText:
                           'Tailscale IP, LAN IP, or domain. Include http(s):// and port.',
                       helperMaxLines: 2,
@@ -232,7 +234,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           ),
           const SizedBox(height: AppSpacing.l),
           Text(
-            'Connect your Home Assistant',
+            'Connect your Plug Assistance',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontSize: 30,
                   height: 1.15,
@@ -242,7 +244,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           const SizedBox(height: 6),
           Text(
             'Paste your instance URL and a long-lived access token. The app '
-            'talks directly to Home Assistant — no cloud in between.',
+            'talks directly to Plug Assistance — no cloud in between.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                   height: 1.5,
@@ -329,7 +331,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _haVersion ?? 'Home Assistant',
+                  _haVersion ?? 'Plug Assistance',
                   style: Theme.of(context)
                       .textTheme
                       .titleSmall
@@ -447,7 +449,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                       children: const [
                         _HelpStep(
                           n: 1,
-                          text: 'Open Home Assistant in your browser.',
+                          text: 'Open Plug Assistance in your browser.',
                         ),
                         _HelpStep(
                           n: 2,

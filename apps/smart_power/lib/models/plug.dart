@@ -51,7 +51,8 @@ extension ApplianceTypeLabel on ApplianceType {
 }
 
 /// View-model object for one plug. Combines the `switch.*` state with its
-/// `sensor.*_{power,voltage,current,energy}` readings.
+/// `sensor.*_{power,voltage,current,energy,...}` readings plus diagnostics
+/// (WiFi signal, availability, last-seen) and the raw HA attribute payloads.
 @immutable
 class Plug {
   /// Short id used in entity ids — e.g. `radio` for `switch.radio`.
@@ -64,8 +65,30 @@ class Plug {
   final double? voltageV;
   final double? currentA;
   final double? energyTodayKwh;
+
+  /// Energy counters beyond "today". SonoffLAN/HA may expose monthly and
+  /// lifetime totals (or these are derived via `utility_meter` helpers).
+  final double? energyMonthKwh;
+  final double? energyTotalKwh;
+
+  /// WiFi signal strength in dBm (HA `signal_strength` sensor / `rssi`).
+  final double? wifiRssiDbm;
+
   final DateTime? lastUpdated;
+
+  /// When the switch state last *changed* (HA `last_changed`). Distinct from
+  /// [lastUpdated], which ticks on any attribute refresh.
+  final DateTime? lastChanged;
+
   final List<double> history; // last N power readings, for sparkline
+
+  /// Raw attribute map of the backing `switch.*` entity — surfaced verbatim
+  /// in the Detail screen diagnostics section for full transparency.
+  final Map<String, dynamic> attributes;
+
+  /// Raw state + attributes of every sensor matched to this plug, keyed by
+  /// entity id (e.g. `sensor.radio_power`). Drives the diagnostics table.
+  final Map<String, PlugReading> readings;
 
   const Plug({
     required this.id,
@@ -77,8 +100,14 @@ class Plug {
     this.voltageV,
     this.currentA,
     this.energyTodayKwh,
+    this.energyMonthKwh,
+    this.energyTotalKwh,
+    this.wifiRssiDbm,
     this.lastUpdated,
+    this.lastChanged,
     this.history = const [],
+    this.attributes = const {},
+    this.readings = const {},
   });
 
   bool get isOn => state == PlugState.on;
@@ -92,8 +121,14 @@ class Plug {
     double? voltageV,
     double? currentA,
     double? energyTodayKwh,
+    double? energyMonthKwh,
+    double? energyTotalKwh,
+    double? wifiRssiDbm,
     DateTime? lastUpdated,
+    DateTime? lastChanged,
     List<double>? history,
+    Map<String, dynamic>? attributes,
+    Map<String, PlugReading>? readings,
   }) {
     return Plug(
       id: id,
@@ -105,8 +140,14 @@ class Plug {
       voltageV: voltageV ?? this.voltageV,
       currentA: currentA ?? this.currentA,
       energyTodayKwh: energyTodayKwh ?? this.energyTodayKwh,
+      energyMonthKwh: energyMonthKwh ?? this.energyMonthKwh,
+      energyTotalKwh: energyTotalKwh ?? this.energyTotalKwh,
+      wifiRssiDbm: wifiRssiDbm ?? this.wifiRssiDbm,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      lastChanged: lastChanged ?? this.lastChanged,
       history: history ?? this.history,
+      attributes: attributes ?? this.attributes,
+      readings: readings ?? this.readings,
     );
   }
 
@@ -128,6 +169,29 @@ class Plug {
     if (n.contains('light') || n.contains('lamp')) return ApplianceType.light;
     return ApplianceType.other;
   }
+}
+
+/// A single raw sensor snapshot matched to a plug — its entity id, current
+/// state string, friendly name, unit, and full attribute map. Used by the
+/// Detail screen's diagnostics table so every value HA exposes is visible.
+@immutable
+class PlugReading {
+  final String entityId;
+  final String state;
+  final String? friendlyName;
+  final String? unit;
+  final Map<String, dynamic> attributes;
+
+  const PlugReading({
+    required this.entityId,
+    required this.state,
+    this.friendlyName,
+    this.unit,
+    this.attributes = const {},
+  });
+
+  /// `"123.4 W"` style label, falling back to the bare state when no unit.
+  String get display => unit == null || unit!.isEmpty ? state : '$state $unit';
 }
 
 /// Top-level app settings persisted via secure storage.
