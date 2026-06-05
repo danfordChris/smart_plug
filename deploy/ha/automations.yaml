@@ -1,0 +1,214 @@
+# smart_plug — Home Assistant automations
+# =========================================================================
+# Deploy target: /home/smart/ha-config/automations.yaml on the Raspberry Pi.
+#
+# BEFORE DEPLOYING — replace the notify service everywhere:
+#   notify.mobile_app_phone  →  your Companion-app service name.
+#   Find it in Home Assistant: Developer Tools → Actions → search
+#   "notify.mobile_app". Example: notify.mobile_app_chris_iphone.
+#
+# Channel: HA Mobile App push (per operator decision, 2026-05-21).
+# Critical-load rule: the Fridge is NEVER auto-switched off. Idle automation
+# is notify-only and targets the Radio only.
+# =========================================================================
+
+# -------------------------------------------------------------------------
+# 1. Outage / availability alert
+#    Fires when a plug drops to "unavailable" for 2 minutes (Wi-Fi loss,
+#    power cut, integration hiccup). Covers both plugs.
+# -------------------------------------------------------------------------
+- id: smart_plug_outage_alert
+  alias: "Smart Plug — outage alert"
+  description: "Notify when a plug becomes unavailable for 2 minutes."
+  mode: single
+  trigger:
+    - platform: state
+      entity_id:
+        - switch.radio
+        - switch.fridge
+      to: "unavailable"
+      for:
+        minutes: 2
+  action:
+    - service: notify.mobile_app_phone
+      data:
+        title: "⚠️ Plug offline"
+        message: >-
+          {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }}
+          has been unavailable for 2 minutes. Check the device or Wi-Fi.
+        data:
+          tag: "smart_plug_outage_{{ trigger.entity_id }}"
+          channel: "Smart Plug Alerts"
+
+# -------------------------------------------------------------------------
+# 1b. Recovery notice — clears the outage when the plug comes back.
+# -------------------------------------------------------------------------
+- id: smart_plug_recovery_notice
+  alias: "Smart Plug — back online"
+  description: "Notify when a previously-unavailable plug recovers."
+  mode: single
+  trigger:
+    - platform: state
+      entity_id:
+        - switch.radio
+        - switch.fridge
+      from: "unavailable"
+      to:
+        - "on"
+        - "off"
+  action:
+    - service: notify.mobile_app_phone
+      data:
+        title: "✅ Plug back online"
+        message: >-
+          {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }}
+          is reachable again ({{ trigger.to_state.state }}).
+        data:
+          tag: "smart_plug_outage_{{ trigger.entity_id }}"
+
+# -------------------------------------------------------------------------
+# 2. High-load alert — 1200 W
+#    Fires when any plug exceeds 1200 W sustained for 1 minute. Catches
+#    heaters / kettles / unexpected heavy draw.
+# -------------------------------------------------------------------------
+- id: smart_plug_high_load_alert
+  alias: "Smart Plug — high power draw"
+  description: "Notify when a plug exceeds 1200 W for 1 minute."
+  mode: single
+  trigger:
+    - platform: numeric_state
+      entity_id:
+        - sensor.radio_power
+        - sensor.fridge_power
+      above: 1200
+      for:
+        minutes: 1
+  action:
+    - service: notify.mobile_app_phone
+      data:
+        title: "🔌 High power draw"
+        message: >-
+          {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }}
+          is drawing {{ trigger.to_state.state }} W (over 1200 W).
+        data:
+          tag: "smart_plug_high_load_{{ trigger.entity_id }}"
+          channel: "Smart Plug Alerts"
+
+# -------------------------------------------------------------------------
+# 3. Idle standby alert — RADIO ONLY, notify only (no auto-off)
+#    Fires when the radio plug is ON but draws < 5 W for 3 hours — likely
+#    left on while idle. The Fridge is intentionally excluded (its
+#    compressor naturally rests near 0 W).
+# -------------------------------------------------------------------------
+- id: smart_plug_radio_idle_notice
+  alias: "Smart Plug — radio idle (notify only)"
+  description: "Notify if the radio sits below 5 W for 3 hours while on."
+  mode: single
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.radio_power
+      below: 5
+      for:
+        hours: 3
+  condition:
+    - condition: state
+      entity_id: switch.radio
+      state: "on"
+  action:
+    - service: notify.mobile_app_phone
+      data:
+        title: "💤 Radio idle"
+        message: >-
+          The radio has drawn under 5 W for 3 hours but is still on.
+          Tap to turn it off and save standby power.
+        data:
+          tag: "smart_plug_radio_idle"
+          channel: "Smart Plug Alerts"
+          actions:
+            - action: "TURN_OFF_RADIO"
+              title: "Turn off radio"
+
+# -------------------------------------------------------------------------
+# 3b. Notification action handler — lets the "Turn off radio" button on the
+#     idle notification actually switch the plug off.
+# -------------------------------------------------------------------------
+- id: smart_plug_radio_idle_action
+  alias: "Smart Plug — handle idle notification action"
+  mode: single
+  trigger:
+    - platform: event
+      event_type: mobile_app_notification_action
+      event_data:
+        action: "TURN_OFF_RADIO"
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.radio
+
+# -------------------------------------------------------------------------
+# 4. Fridge anomaly — possible power loss
+#    The fridge compressor should cycle; a healthy fridge rarely sits at
+#    exactly 0 W for hours. If fridge power stays at/below 1 W for 2 hours,
+#    it may be off / unplugged. Notify only (never auto-toggle a fridge).
+# -------------------------------------------------------------------------
+- id: smart_plug_fridge_anomaly
+  alias: "Smart Plug — fridge may be off"
+  description: "Notify if fridge power stays near zero for 2 hours."
+  mode: single
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.fridge_power
+      below: 1
+      for:
+        hours: 2
+  condition:
+    - condition: state
+      entity_id: switch.fridge
+      state: "on"
+  action:
+    - service: notify.mobile_app_phone
+      data:
+        title: "🧊 Check the fridge"
+        message: >-
+          The fridge has drawn no power for 2 hours. The compressor may have
+          stalled or the appliance is unplugged. Please check it.
+        data:
+          tag: "smart_plug_fridge_anomaly"
+          channel: "Smart Plug Alerts"
+
+# -------------------------------------------------------------------------
+# 5. Scheduled control — radio OFF at 23:00, ON at 07:00
+# -------------------------------------------------------------------------
+- id: smart_plug_radio_off_night
+  alias: "Smart Plug — radio off at 23:00"
+  description: "Turn the radio plug off overnight."
+  mode: single
+  trigger:
+    - platform: time
+      at: "23:00:00"
+  condition:
+    - condition: state
+      entity_id: switch.radio
+      state: "on"
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.radio
+    - service: notify.mobile_app_phone
+      data:
+        title: "🌙 Radio off for the night"
+        message: "Scheduled: the radio plug was switched off at 23:00."
+        data:
+          tag: "smart_plug_radio_schedule"
+
+- id: smart_plug_radio_on_morning
+  alias: "Smart Plug — radio on at 07:00"
+  description: "Turn the radio plug on in the morning."
+  mode: single
+  trigger:
+    - platform: time
+      at: "07:00:00"
+  action:
+    - service: switch.turn_on
+      target:
+        entity_id: switch.radio

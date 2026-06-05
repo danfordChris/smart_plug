@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:intl/intl.dart';
 
 import '../config/app_icons.dart';
+import '../config/constants.dart';
 import '../config/theme.dart';
 import 'sparkline.dart';
 
@@ -15,9 +17,11 @@ import 'sparkline.dart';
 ///   RIGHT — "Estimated cost" label · currency value + delta · "vs yesterday"
 ///         · "View report" tonal button
 class EnergyHeroCard extends StatelessWidget {
+  static final NumberFormat _money = NumberFormat('#,##0');
+
   final double kwh;
   final double deltaKwhPct;
-  final double cost;
+  final double cost; // already in [costCurrency]
   final double deltaCostPct;
   final String costCurrency;
   final List<double> history; // 24 points expected
@@ -30,7 +34,7 @@ class EnergyHeroCard extends StatelessWidget {
     required this.cost,
     required this.deltaCostPct,
     required this.history,
-    this.costCurrency = '£',
+    this.costCurrency = AppConstants.currencySymbol,
     this.onReport,
   });
 
@@ -53,165 +57,168 @@ class EnergyHeroCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            // ── LEFT column — energy + sparkline ─────────────────────
-            Expanded(
-              flex: 6,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Label(text: "Today's energy", color: fgMuted),
-                  const SizedBox(height: 4),
-                  _ValueWithDelta(
-                    value: kwh.toStringAsFixed(1),
-                    unit: 'kWh',
-                    deltaPct: deltaKwhPct,
-                    primaryColor: scheme.onPrimary,
-                    mutedColor: fgMuted,
+          // ── LEFT column — energy + sparkline ─────────────────────
+          Expanded(
+            flex: 6,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Label(text: "Today's energy", color: fgMuted),
+                const SizedBox(height: 4),
+                _ValueWithDelta(
+                  value: kwh.toStringAsFixed(1),
+                  unit: 'kWh',
+                  deltaPct: deltaKwhPct,
+                  primaryColor: scheme.onPrimary,
+                  mutedColor: fgMuted,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'vs yesterday',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: fgMuted, fontSize: 11),
+                ),
+                const SizedBox(height: AppSpacing.s),
+                SizedBox(
+                  height: 44,
+                  child: HeroSparkline(
+                    values: history,
+                    lineColor: scheme.onPrimary,
+                    gradientStart: scheme.onPrimary.withValues(alpha: 0.35),
+                    gradientEnd: scheme.onPrimary.withValues(alpha: 0),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'vs yesterday',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: fgMuted,
-                          fontSize: 11,
-                        ),
-                  ),
-                  const SizedBox(height: AppSpacing.s),
-                  SizedBox(
-                    height: 44,
-                    child: HeroSparkline(
-                      values: history,
-                      lineColor: scheme.onPrimary,
-                      gradientStart:
-                          scheme.onPrimary.withValues(alpha: 0.35),
-                      gradientEnd: scheme.onPrimary.withValues(alpha: 0),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  // Time axis labels — match JSX (12AM / 6AM / 12PM / 6PM / 12AM)
-                  DefaultTextStyle(
-                    style: AppTheme.monoStyle(scheme).copyWith(
-                      color: fgMuted,
-                      fontSize: 9,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text('12 AM'),
-                        Text('6 AM'),
-                        Text('12 PM'),
-                        Text('6 PM'),
-                        Text('12 AM'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // ── DIVIDER ──────────────────────────────────────────────
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-              child: Container(
-                width: 1,
-                height: 132,
-                color: scheme.onPrimary.withValues(alpha: 0.22),
-              ),
-            ),
-            // ── RIGHT column — cost ──────────────────────────────────
-            Expanded(
-              flex: 5,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Label(text: 'Estimated cost', color: fgMuted),
-                  const SizedBox(height: 4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        costCurrency,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(
-                              color: scheme.onPrimary.withValues(alpha: 0.85),
-                              fontSize: 22,
-                            ),
-                      ),
-                      Text(
-                        cost.toStringAsFixed(2),
-                        style: Theme.of(context)
-                            .textTheme
-                            .displayMedium
-                            ?.copyWith(
-                              color: scheme.onPrimary,
-                              fontSize: 32,
-                              height: 1,
-                            ),
-                      ),
-                      const SizedBox(width: 4),
-                      _DeltaPill(
-                        deltaPct: deltaCostPct,
-                        color: scheme.onPrimary,
-                        bg: scheme.onPrimary.withValues(alpha: 0.16),
-                      ),
+                ),
+                const SizedBox(height: 2),
+                // Time axis labels — match JSX (12AM / 6AM / 12PM / 6PM / 12AM)
+                DefaultTextStyle(
+                  style: AppTheme.monoStyle(
+                    scheme,
+                  ).copyWith(color: fgMuted, fontSize: 9),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Text('12 AM'),
+                      Text('6 AM'),
+                      Text('12 PM'),
+                      Text('6 PM'),
+                      Text('12 AM'),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'vs yesterday',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: fgMuted,
-                          fontSize: 11,
-                        ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  // View report tonal button (matches .hero-card-report)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Material(
-                      color: scheme.onPrimary.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(20),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: onReport,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              HugeIcon(
-                                icon: AppIcons.energy,
-                                size: 14,
-                                color: scheme.onPrimary,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'View report',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelLarge
-                                    ?.copyWith(
-                                      color: scheme.onPrimary,
-                                      fontSize: 13,
+                ),
+              ],
+            ),
+          ),
+          // ── DIVIDER ──────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+            child: Container(
+              width: 1,
+              height: 132,
+              color: scheme.onPrimary.withValues(alpha: 0.22),
+            ),
+          ),
+          // ── RIGHT column — cost ──────────────────────────────────
+          Expanded(
+            flex: 5,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Label(text: 'Estimated cost', color: fgMuted),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FittedBox(
+                        alignment: Alignment.centerLeft,
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              costCurrency,
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    color: scheme.onPrimary.withValues(
+                                      alpha: 0.85,
                                     ),
-                              ),
-                            ],
-                          ),
+                                    fontSize: 22,
+                                  ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _money.format(cost.round()),
+                              style: Theme.of(context).textTheme.displayMedium
+                                  ?.copyWith(
+                                    color: scheme.onPrimary,
+                                    fontSize: 32,
+                                    height: 1,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    _DeltaPill(
+                      deltaPct: deltaCostPct,
+                      color: scheme.onPrimary,
+                      bg: scheme.onPrimary.withValues(alpha: 0.16),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'vs yesterday',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: fgMuted, fontSize: 11),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                // View report tonal button (matches .hero-card-report)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Material(
+                    color: scheme.onPrimary.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: onReport,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            HugeIcon(
+                              icon: AppIcons.energy,
+                              size: 14,
+                              color: scheme.onPrimary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'View report',
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(
+                                    color: scheme.onPrimary,
+                                    fontSize: 13,
+                                  ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -226,10 +233,10 @@ class _Label extends StatelessWidget {
     return Text(
       text,
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: color,
-            fontSize: 11,
-            letterSpacing: 0.4,
-          ),
+        color: color,
+        fontSize: 11,
+        letterSpacing: 0.4,
+      ),
     );
   }
 }
@@ -259,20 +266,19 @@ class _ValueWithDelta extends StatelessWidget {
         Text(
           value,
           style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                color: primaryColor,
-                fontSize: 36,
-                height: 1,
-              ),
+            color: primaryColor,
+            fontSize: 36,
+            height: 1,
+          ),
         ),
         const SizedBox(width: 4),
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: Text(
             unit,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: mutedColor,
-                  fontSize: 14,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: mutedColor, fontSize: 14),
           ),
         ),
         const SizedBox(width: 6),

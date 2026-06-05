@@ -36,13 +36,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     // Greeting + subtitle
-    expect(find.textContaining('Alex'), findsOneWidget);
+    expect(find.textContaining('energy overview'), findsOneWidget);
     // Hero labels
     expect(find.text("Today's energy"), findsOneWidget);
     expect(find.text('Estimated cost'), findsOneWidget);
     // Quick access
     expect(find.text('Quick access'), findsOneWidget);
-    expect(find.text('Devices'), findsWidgets);
+    expect(find.text('Appliances'), findsWidgets);
     // Plug cards (demo)
     expect(find.text('Radio'), findsOneWidget);
     expect(find.text('Fridge'), findsOneWidget);
@@ -96,7 +96,7 @@ List<Plug> _demoPlugs() => [
 class _DemoSettingsNotifier extends SettingsNotifier {
   @override
   Future<AppSettings> build() async => const AppSettings(
-        haUrl: 'http://100.83.45.15:8123',
-        haToken: 'demo-token',
+        gatewayUrl: 'http://100.83.45.15:8099',
+        accessToken: 'demo-access',
       );
 }

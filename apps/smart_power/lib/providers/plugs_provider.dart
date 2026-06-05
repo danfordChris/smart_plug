@@ -37,7 +37,12 @@ final plugsSourceProvider =
 final haApiProvider = Provider<HaApi?>((ref) {
   final settings = ref.watch(settingsProvider).valueOrNull;
   if (settings == null || !settings.isConfigured) return null;
-  final api = HaApi(baseUrl: settings.haUrl!, token: settings.haToken!);
+  final api = HaApi(
+    baseUrl: settings.gatewayUrl!,
+    token: settings.accessToken!,
+    // On a 401 the gateway token has expired — renew it via the refresh token.
+    refresher: () => ref.read(settingsProvider.notifier).refreshAccessToken(),
+  );
   ref.onDispose(api.dispose);
   return api;
 });

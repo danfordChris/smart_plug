@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../config/app_icons.dart';
+import '../config/constants.dart';
 import '../config/demo_data.dart';
 import '../config/theme.dart';
 import '../models/plug.dart';
 import '../providers/plugs_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/snackbars.dart';
+import '../widgets/bill_summary_sheet.dart';
 import '../widgets/connection_banner.dart';
 import '../widgets/energy_hero_card.dart';
 import '../widgets/insight_card.dart';
@@ -23,12 +25,8 @@ class DashboardScreen extends ConsumerWidget {
   final VoidCallback? onOpenInsights;
   final VoidCallback? onOpenDevices;
   final VoidCallback? onAddDevice;
-  const DashboardScreen({
-    super.key,
-    this.onOpenInsights,
-    this.onOpenDevices,
-    this.onAddDevice,
-  });
+
+  const DashboardScreen({super.key, this.onOpenInsights, this.onOpenDevices, this.onAddDevice});
 
   // Quick-access tints from dashboard-widgets.jsx (oklch → sRGB approx).
   static const Color _tintDevices = Color(0xFF4A6CFF); // indigo
@@ -51,56 +49,31 @@ class DashboardScreen extends ConsumerWidget {
         bottom: false,
         child: Column(
           children: [
-            if (hasError)
-              ConnectionBanner(
-                onRetry: () => ref.read(plugsProvider.notifier).refresh(),
-              ),
-            _GreetingHeader(
-              onRefresh: () => ref.read(plugsProvider.notifier).refresh(),
-              unreadAlerts: 2,
-            ),
+            if (hasError) ConnectionBanner(onRetry: () => ref.read(plugsProvider.notifier).refresh()),
+            _GreetingHeader(onRefresh: () => ref.read(plugsProvider.notifier).refresh(), unreadAlerts: 2),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () => ref.read(plugsProvider.notifier).refresh(),
                 child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.l,
-                    AppSpacing.xs,
-                    AppSpacing.l,
-                    AppSpacing.xxl,
-                  ),
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.l, AppSpacing.xs, AppSpacing.l, AppSpacing.xxl),
                   children: [
-                    DataSourceBanner(
-                      source: source,
-                      onRetry: () =>
-                          ref.read(plugsProvider.notifier).refresh(),
-                    ),
-                    _hero(context, plugsAsync.valueOrNull ?? const []),
+                    DataSourceBanner(source: source, onRetry: () => ref.read(plugsProvider.notifier).refresh()),
+                    _hero(context, plugsAsync.valueOrNull ?? const [], customerEmail: settings?.email),
                     const SizedBox(height: 22),
                     const SectionHeader(title: 'Quick access'),
                     const SizedBox(height: AppSpacing.s),
                     _quickAccess(context, scheme),
                     const SizedBox(height: 24),
-                    SectionHeader(
-                      title: 'Your plugs',
-                      trailing: 'updated just now',
-                      trailingIsMono: true,
-                    ),
+                    SectionHeader(title: 'My Appliance', trailing: 'updated just now', trailingIsMono: true),
                     const SizedBox(height: AppSpacing.s),
                     _plugs(context, ref, plugsAsync),
                     const SizedBox(height: 24),
-                    SectionHeader(
-                      title: 'Insights & alerts',
-                      trailing: 'View all',
-                      onTrailingTap: onOpenInsights,
-                    ),
+                    SectionHeader(title: 'Insights & alerts', trailing: 'View all', onTrailingTap: onOpenInsights),
                     const SizedBox(height: AppSpacing.s),
                     ..._insights(context, plugsAsync.valueOrNull ?? const []),
                     const SizedBox(height: 18),
-                    _connectionFooter(context, settings?.haUrl),
+                    _connectionFooter(context, settings?.gatewayUrl),
                     const SizedBox(height: AppSpacing.l),
                   ],
                 ),
@@ -112,13 +85,10 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _hero(BuildContext context, List<Plug> plugs) {
+  Widget _hero(BuildContext context, List<Plug> plugs, {String? customerEmail}) {
     // Whole-home figure: plug totals + "other appliances" baseline, matching
     // app.jsx (`energyToday = plugs.reduce(...) + 17.1`).
-    final plugKwh = plugs.fold<double>(
-      0,
-      (acc, p) => acc + (p.energyTodayKwh ?? 0),
-    );
+    final plugKwh = plugs.fold<double>(0, (acc, p) => acc + (p.energyTodayKwh ?? 0));
     final totalKwh = plugKwh + DemoData.otherAppliancesKwh;
     // Synthetic 24-pt hourly trend (morning + evening peaks) until HA
     // long-term history is wired — mirrors app.jsx dayHistory().
@@ -132,9 +102,10 @@ class DashboardScreen extends ConsumerWidget {
     return EnergyHeroCard(
       kwh: totalKwh,
       deltaKwhPct: -12,
-      cost: totalKwh * 0.27,
+      cost: totalKwh * AppConstants.tariffPerKwh,
       deltaCostPct: -8,
       history: hourly,
+      onReport: () => BillSummarySheet.show(context, plugs: plugs, dailyKwh: totalKwh, customerEmail: customerEmail),
     );
   }
 
@@ -142,36 +113,11 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _quickAccess(BuildContext context, ColorScheme scheme) {
     final tiles = <Map<String, dynamic>>[
-      {
-        'icon': AppIcons.devices,
-        'label': 'Devices',
-        'tint': _tintDevices,
-        'onTap': onOpenDevices,
-      },
-      {
-        'icon': AppIcons.schedule,
-        'label': 'Schedule',
-        'tint': _tintSchedule,
-        'onTap': () => AppSnack.comingSoon(context, 'Scheduling'),
-      },
-      {
-        'icon': AppIcons.wrench,
-        'label': 'Maintain',
-        'tint': _tintMaintain,
-        'onTap': () => AppSnack.comingSoon(context, 'Maintenance'),
-      },
-      {
-        'icon': AppIcons.warn,
-        'label': 'Alerts',
-        'tint': _tintAlerts,
-        'onTap': onOpenInsights,
-      },
-      {
-        'icon': AppIcons.leaf,
-        'label': 'Optimize',
-        'tint': scheme.primary,
-        'onTap': () => AppSnack.comingSoon(context, 'Optimization'),
-      },
+      {'icon': AppIcons.devices, 'label': 'Appliances', 'tint': _tintDevices, 'onTap': onOpenDevices},
+      {'icon': AppIcons.schedule, 'label': 'Schedule', 'tint': _tintSchedule, 'onTap': () => AppSnack.comingSoon(context, 'Scheduling')},
+      {'icon': AppIcons.wrench, 'label': 'Maintain', 'tint': _tintMaintain, 'onTap': () => AppSnack.comingSoon(context, 'Maintenance')},
+      {'icon': AppIcons.warn, 'label': 'Alerts', 'tint': _tintAlerts, 'onTap': onOpenInsights},
+      {'icon': AppIcons.leaf, 'label': 'Optimize', 'tint': scheme.primary, 'onTap': () => AppSnack.comingSoon(context, 'Optimization')},
     ];
     return SizedBox(
       height: 92,
@@ -183,22 +129,13 @@ class DashboardScreen extends ConsumerWidget {
         separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.s),
         itemBuilder: (_, i) {
           final t = tiles[i];
-          return QuickAccessTile(
-            icon: t['icon'],
-            label: t['label'] as String,
-            tint: t['tint'] as Color,
-            onTap: t['onTap'] as VoidCallback?,
-          );
+          return QuickAccessTile(icon: t['icon'], label: t['label'] as String, tint: t['tint'] as Color, onTap: t['onTap'] as VoidCallback?);
         },
       ),
     );
   }
 
-  Widget _plugs(
-    BuildContext context,
-    WidgetRef ref,
-    AsyncValue<List<Plug>> async,
-  ) {
+  Widget _plugs(BuildContext context, WidgetRef ref, AsyncValue<List<Plug>> async) {
     return async.when(
       data: (plugs) {
         if (plugs.isEmpty) return _emptyPlugs(context);
@@ -207,18 +144,11 @@ class DashboardScreen extends ConsumerWidget {
             for (final p in plugs) ...[
               PlugCard(
                 plug: p,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => DetailScreen(plugId: p.id)),
-                ),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DetailScreen(plugId: p.id))),
                 onToggle: (_) async {
-                  final ok =
-                      await ref.read(plugsProvider.notifier).toggle(p.id);
+                  final ok = await ref.read(plugsProvider.notifier).toggle(p.id);
                   if (!ok && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Couldn't reach Plug Assistance"),
-                      ),
-                    );
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Couldn't reach Plug Assistance")));
                   }
                 },
               ),
@@ -227,13 +157,7 @@ class DashboardScreen extends ConsumerWidget {
           ],
         );
       },
-      loading: () => Column(
-        children: const [
-          PlugCardSkeleton(),
-          SizedBox(height: 10),
-          PlugCardSkeleton(),
-        ],
-      ),
+      loading: () => Column(children: const [PlugCardSkeleton(), SizedBox(height: 10), PlugCardSkeleton()]),
       error: (_, __) => _emptyPlugs(context),
     );
   }
@@ -242,25 +166,15 @@ class DashboardScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.l),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadii.card),
-      ),
+      decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(AppRadii.card)),
       child: Row(
         children: [
-          HugeIcon(
-            icon: AppIcons.otherPlug,
-            color: scheme.onSurfaceVariant,
-            size: 20,
-          ),
+          HugeIcon(icon: AppIcons.otherPlug, color: scheme.onSurfaceVariant, size: 20),
           const SizedBox(width: AppSpacing.m),
           Expanded(
             child: Text(
               'No plugs yet. Tap the + button below to add one.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
         ],
@@ -279,8 +193,7 @@ class DashboardScreen extends ConsumerWidget {
         icon: AppIcons.bolt,
         tint: tintBolt,
         title: 'Standby draw detected',
-        description:
-            'Radio drawing 7.8 W when likely idle — about £1.20/month wasted.',
+        description: 'Radio drawing 7.8 W when likely idle — about 2,800 TSh/month wasted.',
         action: 'Check now',
         onTap: () => AppSnack.comingSoon(context, 'Insights'),
       ),
@@ -289,9 +202,8 @@ class DashboardScreen extends ConsumerWidget {
         icon: AppIcons.schedule,
         tint: tintSchedule,
         title: 'Off-peak window tonight',
-        description:
-            'Lowest tariff 00:30 – 04:30. Schedule heavy loads to save £0.12.',
-        action: 'Save £0.12',
+        description: 'Lowest tariff 00:30 – 04:30. Schedule heavy loads to save 250 TSh.',
+        action: 'Save 250 TSh',
         onTap: () => AppSnack.comingSoon(context, 'Insights'),
       ),
       const SizedBox(height: 8),
@@ -299,8 +211,7 @@ class DashboardScreen extends ConsumerWidget {
         icon: AppIcons.leaf,
         tint: tintLeaf,
         title: 'Fridge running efficiently',
-        description:
-            'Compressor cycle is steady at 18 min — within normal range.',
+        description: 'Compressor cycle is steady at 18 min — within normal range.',
         onTap: () => AppSnack.comingSoon(context, 'Insights'),
       ),
     ];
@@ -314,34 +225,19 @@ class DashboardScreen extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          HugeIcon(
-            icon: AppIcons.link,
-            size: 12,
-            color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
-          ),
+          HugeIcon(icon: AppIcons.link, size: 12, color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
           const SizedBox(width: 6),
           Text(
-            host ?? '100.83.45.15:8123',
-            style: AppTheme.monoStyle(scheme).copyWith(
-              color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
-              fontSize: 11,
-            ),
+            host ?? '100.83.45.15:8099',
+            style: AppTheme.monoStyle(scheme).copyWith(color: scheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 11),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              '·',
-              style: TextStyle(
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
-              ),
-            ),
+            child: Text('·', style: TextStyle(color: scheme.onSurfaceVariant.withValues(alpha: 0.7))),
           ),
           Text(
             'via Tailscale',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
-                  fontSize: 11,
-                ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 11),
           ),
         ],
       ),
@@ -364,23 +260,20 @@ class DashboardScreen extends ConsumerWidget {
 class _GreetingHeader extends StatefulWidget {
   final VoidCallback onRefresh;
   final int unreadAlerts;
+
   const _GreetingHeader({required this.onRefresh, this.unreadAlerts = 0});
 
   @override
   State<_GreetingHeader> createState() => _GreetingHeaderState();
 }
 
-class _GreetingHeaderState extends State<_GreetingHeader>
-    with SingleTickerProviderStateMixin {
+class _GreetingHeaderState extends State<_GreetingHeader> with SingleTickerProviderStateMixin {
   late final AnimationController _spin;
 
   @override
   void initState() {
     super.initState();
-    _spin = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
+    _spin = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
   }
 
   @override
@@ -400,17 +293,10 @@ class _GreetingHeaderState extends State<_GreetingHeader>
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final hour = DateTime.now().hour;
-    final greeting = hour < 12
-        ? 'Good morning'
-        : (hour < 18 ? 'Good afternoon' : 'Good evening');
+    final greeting = hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening');
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.l,
-        AppSpacing.m,
-        AppSpacing.s,
-        AppSpacing.s,
-      ),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.l, AppSpacing.m, AppSpacing.s, AppSpacing.s),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -422,23 +308,15 @@ class _GreetingHeaderState extends State<_GreetingHeader>
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      '$greeting, Alex',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontSize: 22,
-                            height: 1.15,
-                          ),
+                      '$greeting,', // Alex,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 22, height: 1.15),
                     ),
                     const SizedBox(width: 6),
                     const Text('👋', style: TextStyle(fontSize: 20)),
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  "Here's your energy overview today",
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                ),
+                Text("Here's your energy overview today", style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
               ],
             ),
           ),
@@ -447,11 +325,7 @@ class _GreetingHeaderState extends State<_GreetingHeader>
             onPressed: _onRefresh,
             icon: RotationTransition(
               turns: _spin,
-              child: HugeIcon(
-                icon: AppIcons.refresh,
-                size: 22,
-                color: scheme.onSurface,
-              ),
+              child: HugeIcon(icon: AppIcons.refresh, size: 22, color: scheme.onSurface),
             ),
           ),
           _BellWithBadge(unread: widget.unreadAlerts),
@@ -463,6 +337,7 @@ class _GreetingHeaderState extends State<_GreetingHeader>
 
 class _BellWithBadge extends StatelessWidget {
   final int unread;
+
   const _BellWithBadge({required this.unread});
 
   @override
@@ -477,11 +352,7 @@ class _BellWithBadge extends StatelessWidget {
           IconButton(
             tooltip: 'Notifications',
             onPressed: () => AppSnack.comingSoon(context, 'Notifications'),
-            icon: HugeIcon(
-              icon: AppIcons.bell,
-              size: 22,
-              color: scheme.onSurface,
-            ),
+            icon: HugeIcon(icon: AppIcons.bell, size: 22, color: scheme.onSurface),
           ),
           if (unread > 0)
             Positioned(
@@ -498,12 +369,7 @@ class _BellWithBadge extends StatelessWidget {
                 ),
                 child: Text(
                   '$unread',
-                  style: TextStyle(
-                    color: scheme.onError,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    height: 1,
-                  ),
+                  style: TextStyle(color: scheme.onError, fontSize: 9, fontWeight: FontWeight.w700, height: 1),
                 ),
               ),
             ),

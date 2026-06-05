@@ -19,34 +19,45 @@ class SecureStorage {
   final FlutterSecureStorage _storage;
 
   Future<AppSettings> load() async {
-    final url = await _storage.read(key: AppConstants.storageKeyUrl);
-    final token = await _storage.read(key: AppConstants.storageKeyToken);
+    final gatewayUrl =
+        await _storage.read(key: AppConstants.storageKeyGatewayUrl);
+    final accessToken =
+        await _storage.read(key: AppConstants.storageKeyAccessToken);
+    final refreshToken =
+        await _storage.read(key: AppConstants.storageKeyRefreshToken);
+    final email = await _storage.read(key: AppConstants.storageKeyEmail);
+    final role = await _storage.read(key: AppConstants.storageKeyRole);
     final themeMode = _decodeTheme(
       await _storage.read(key: AppConstants.storageKeyThemeMode),
     );
     final pollStr = await _storage.read(key: AppConstants.storageKeyPollSeconds);
     final poll = int.tryParse(pollStr ?? '') ?? AppConstants.pollSeconds;
     return AppSettings(
-      haUrl: url,
-      haToken: token,
+      gatewayUrl: gatewayUrl,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      email: email,
+      role: role,
       themeMode: themeMode,
       pollSeconds: poll,
     );
   }
 
   Future<void> save(AppSettings settings) async {
-    if (settings.haUrl != null) {
-      await _storage.write(
-        key: AppConstants.storageKeyUrl,
-        value: settings.haUrl,
-      );
-    }
-    if (settings.haToken != null) {
-      await _storage.write(
-        key: AppConstants.storageKeyToken,
-        value: settings.haToken,
-      );
-    }
+    await _writeOrDelete(
+      AppConstants.storageKeyGatewayUrl,
+      settings.gatewayUrl,
+    );
+    await _writeOrDelete(
+      AppConstants.storageKeyAccessToken,
+      settings.accessToken,
+    );
+    await _writeOrDelete(
+      AppConstants.storageKeyRefreshToken,
+      settings.refreshToken,
+    );
+    await _writeOrDelete(AppConstants.storageKeyEmail, settings.email);
+    await _writeOrDelete(AppConstants.storageKeyRole, settings.role);
     await _storage.write(
       key: AppConstants.storageKeyThemeMode,
       value: _encodeTheme(settings.themeMode),
@@ -57,10 +68,22 @@ class SecureStorage {
     );
   }
 
-  /// Wipes URL + token. Keeps ThemeMode + poll preference.
+  Future<void> _writeOrDelete(String key, String? value) async {
+    if (value == null) {
+      await _storage.delete(key: key);
+    } else {
+      await _storage.write(key: key, value: value);
+    }
+  }
+
+  /// Logs out: wipes the session (gateway, tokens, identity). Keeps ThemeMode
+  /// + poll preference.
   Future<void> forgetInstance() async {
-    await _storage.delete(key: AppConstants.storageKeyUrl);
-    await _storage.delete(key: AppConstants.storageKeyToken);
+    await _storage.delete(key: AppConstants.storageKeyGatewayUrl);
+    await _storage.delete(key: AppConstants.storageKeyAccessToken);
+    await _storage.delete(key: AppConstants.storageKeyRefreshToken);
+    await _storage.delete(key: AppConstants.storageKeyEmail);
+    await _storage.delete(key: AppConstants.storageKeyRole);
   }
 
   String _encodeTheme(ThemeMode m) => switch (m) {

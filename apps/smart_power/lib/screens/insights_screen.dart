@@ -66,7 +66,7 @@ class InsightsScreen extends ConsumerWidget {
             tint: _tintSchedule,
             title: 'Schedule suggestion',
             description: 'Run heavy loads 00:30 – 04:30 to use off-peak tariff.',
-            action: 'Save £0.12',
+            action: 'Save 250 TSh',
             actionColor: _tintSchedule,
           ),
           const SizedBox(height: 8),
@@ -101,7 +101,6 @@ class InsightsScreen extends ConsumerWidget {
   ) {
     final scheme = Theme.of(context).colorScheme;
     final totalKwh = weekly.fold<double>(0, (a, b) => a + b);
-    final totalCost = totalKwh * 0.27;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -161,7 +160,7 @@ class InsightsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '£${totalCost.toStringAsFixed(2)}',
+                    Fmt.cost(totalKwh),
                     style: Theme.of(context)
                         .textTheme
                         .displayMedium

@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Smart Power · Pairing QR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--
+    smart_plug — local pairing QR generator.
+
+    Open this file directly in any modern browser (double-click). Paste your
+    Home Assistant URL + a long-lived access token and a QR code is generated
+    entirely client-side — no network upload, the token never leaves this page.
+
+    Scan the QR with the smart_power app's "Scan pairing QR" button to pair
+    your phone in one tap.
+
+    The QR encodes JSON: {"url":"...","token":"..."}
+    The Smart Power app also accepts a smartpower://pair?url=...&token=... URI.
+  -->
+  <style>
+    :root {
+      --primary: #1f8a5b;
+      --bg: #f5f5f0;
+      --card: #ffffff;
+      --text: #1a1f1c;
+      --muted: #5b6660;
+      --border: #d8e1dc;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+    h1 {
+      font-size: 26px; margin: 0 0 4px;
+      letter-spacing: -0.01em;
+    }
+    p.lead {
+      margin: 0 0 24px;
+      color: var(--muted); line-height: 1.5;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 13px; font-weight: 600;
+      margin-bottom: 4px;
+    }
+    input[type=text], input[type=password] {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
+      background: #fafbfa;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .row { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+    .row > div { flex: 1; }
+    .row:last-child { margin-bottom: 0; }
+    button {
+      border: 0; background: var(--primary); color: white;
+      padding: 11px 18px; border-radius: 10px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .qr-card {
+      text-align: center;
+      padding: 28px 20px;
+    }
+    #qrcode {
+      display: inline-block;
+      padding: 16px;
+      background: white;
+      border-radius: 12px;
+      min-width: 280px;
+      min-height: 280px;
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 14px;
+      line-height: 1.5;
+    }
+    .danger {
+      font-size: 12px; color: #b04545;
+      margin-top: 10px;
+    }
+    code { font-family: ui-monospace, monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Pair Smart Power</h1>
+    <p class="lead">
+      Generate a one-time QR code your phone can scan instead of typing a
+      token. Everything happens in this page — nothing is uploaded.
+    </p>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label for="url">Home Assistant URL</label>
+          <input id="url" type="text"
+            value="http://100.83.45.15:8123"
+            placeholder="http://100.83.45.15:8123">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="token">Long-Lived Access Token</label>
+          <input id="token" type="password" placeholder="paste token here">
+        </div>
+      </div>
+      <div class="row">
+        <button id="generate">Generate QR</button>
+        <button id="reveal" style="background:#e3eae6;color:#1a1f1c">
+          Show / hide token
+        </button>
+      </div>
+      <div class="hint">
+        Generate the token in Home Assistant: <b>Profile → Security →
+        Long-Lived Access Tokens → Create Token</b>. The token never leaves
+        this page; it ends up only in the QR.
+      </div>
+    </div>
+
+    <div class="card qr-card" id="qr-section" style="display:none">
+      <div id="qrcode"></div>
+      <div class="hint">
+        Open the Smart Power app → Setup → <b>Scan pairing QR</b>. Point your
+        phone at this screen.
+      </div>
+      <div class="danger" id="qr-warning"></div>
+    </div>
+  </div>
+
+  <!--
+    QRCode.js — minified MIT-licensed generator (Sangmin Yoon, ~14 KB).
+    Loaded from jsDelivr CDN; the token itself never leaves this page — the
+    script runs locally after load and the QR is rendered in-browser.
+    If you prefer fully offline operation, download `qrcode.min.js` next to
+    this HTML and change the `src` below to `./qrcode.min.js`.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <script>
+    const $ = s => document.querySelector(s);
+    const urlInput = $('#url');
+    const tokenInput = $('#token');
+    const generateBtn = $('#generate');
+    const revealBtn = $('#reveal');
+    const qrSection = $('#qr-section');
+    const qrEl = $('#qrcode');
+    const warnEl = $('#qr-warning');
+
+    revealBtn.addEventListener('click', () => {
+      tokenInput.type = tokenInput.type === 'password' ? 'text' : 'password';
+    });
+
+    generateBtn.addEventListener('click', () => {
+      const url = urlInput.value.trim();
+      const token = tokenInput.value.trim();
+      if (!url || !token) {
+        alert('Enter both the URL and the long-lived token.');
+        return;
+      }
+      const payload = JSON.stringify({ url, token });
+      // qrcode-generator: typeNumber 0 = auto, errorCorrectionLevel L for max
+      // capacity (tokens are ~180 chars).
+      const qr = qrcode(0, 'L');
+      qr.addData(payload);
+      try {
+        qr.make();
+      } catch (e) {
+        warnEl.textContent = 'Payload too large for one QR. Try shortening the URL.';
+        return;
+      }
+      qrEl.innerHTML = qr.createImgTag(6, 4);
+      qrSection.style.display = '';
+      warnEl.textContent = '';
+      qrSection.scrollIntoView({ behavior: 'smooth' });
+    });
+  </script>
+</body>
+</html>

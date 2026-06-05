@@ -195,39 +195,59 @@ class PlugReading {
 }
 
 /// Top-level app settings persisted via secure storage.
+///
+/// Auth is now session-based against the Plug Assistance gateway: the app
+/// stores the gateway URL plus the per-user access/refresh tokens it receives
+/// at login. The Home Assistant token lives only on the gateway, server-side.
 @immutable
 class AppSettings {
-  final String? haUrl;
-  final String? haToken;
+  final String? gatewayUrl;
+  final String? accessToken;
+  final String? refreshToken;
+  final String? email;
+  final String? role; // "admin" | "user"
   final ThemeMode themeMode;
   final int pollSeconds;
 
   const AppSettings({
-    this.haUrl,
-    this.haToken,
+    this.gatewayUrl,
+    this.accessToken,
+    this.refreshToken,
+    this.email,
+    this.role,
     this.themeMode = ThemeMode.system,
     this.pollSeconds = 10,
   });
 
+  /// Signed in when we have a gateway and an access token.
   bool get isConfigured =>
-      (haUrl?.isNotEmpty ?? false) && (haToken?.isNotEmpty ?? false);
+      (gatewayUrl?.isNotEmpty ?? false) && (accessToken?.isNotEmpty ?? false);
+
+  bool get isAdmin => role == 'admin';
 
   AppSettings copyWith({
-    String? haUrl,
-    String? haToken,
+    String? gatewayUrl,
+    String? accessToken,
+    String? refreshToken,
+    String? email,
+    String? role,
     ThemeMode? themeMode,
     int? pollSeconds,
     bool clear = false,
   }) {
     if (clear) {
+      // Logout: drop session, keep device preferences.
       return AppSettings(
         themeMode: themeMode ?? this.themeMode,
         pollSeconds: pollSeconds ?? this.pollSeconds,
       );
     }
     return AppSettings(
-      haUrl: haUrl ?? this.haUrl,
-      haToken: haToken ?? this.haToken,
+      gatewayUrl: gatewayUrl ?? this.gatewayUrl,
+      accessToken: accessToken ?? this.accessToken,
+      refreshToken: refreshToken ?? this.refreshToken,
+      email: email ?? this.email,
+      role: role ?? this.role,
       themeMode: themeMode ?? this.themeMode,
       pollSeconds: pollSeconds ?? this.pollSeconds,
     );

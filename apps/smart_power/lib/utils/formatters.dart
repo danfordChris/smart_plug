@@ -1,10 +1,13 @@
 import 'package:intl/intl.dart';
 
+import '../config/constants.dart';
+
 /// Number formatters for power, energy, voltage, currency, and relative time.
 /// Centralizes intl usage so widgets stay clean (Handoff §9 utils/formatters).
 class Fmt {
   Fmt._();
 
+  static final NumberFormat _whole = NumberFormat('#,##0');
   static final NumberFormat _power0 = NumberFormat('#,##0');
   static final NumberFormat _power1 = NumberFormat('#,##0.0');
   static final NumberFormat _energy2 = NumberFormat('#,##0.00');
@@ -60,9 +63,16 @@ class Fmt {
     return '${diff.inDays}d ago';
   }
 
-  /// Currency for the estimated-cost label on the hero card.
-  /// Stays generic — uses the operator's locale by default.
-  static String currency(double amount, {String symbol = '₹'}) {
-    return '$symbol${_energy2.format(amount)}';
-  }
+  /// A monetary amount → e.g. "TSh 9,350". Currency + rounding are driven by
+  /// [AppConstants.currencySymbol]; shillings show no decimals.
+  static String money(double amount) =>
+      '${AppConstants.currencySymbol} ${_whole.format(amount.round())}';
+
+  /// Estimated cost of [kwh] at the configured tariff → e.g. "TSh 9,350".
+  static String cost(double kwh) => money(kwh * AppConstants.tariffPerKwh);
+
+  /// Just the numeric cost (no symbol), for layouts that render the symbol
+  /// separately. e.g. 9350.0 → "9,350".
+  static String costValue(double kwh) =>
+      _whole.format((kwh * AppConstants.tariffPerKwh).round());
 }

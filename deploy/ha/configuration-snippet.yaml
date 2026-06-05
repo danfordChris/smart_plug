@@ -1,0 +1,18 @@
+# smart_plug — configuration.yaml additions
+# =========================================================================
+# Append these to /home/smart/ha-config/configuration.yaml on the Pi, then
+# restart Home Assistant (Developer Tools → YAML → Restart).
+#
+# Provides the helper the smart_power app uses to store appliance-type
+# assignments. HA is the source of truth for device types (operator
+# decision, 2026-05-21).
+# =========================================================================
+
+input_text:
+  smart_power_device_types:
+    name: Smart Power device types
+    # JSON map of {entity_id: appliance_type}, e.g.
+    # {"switch.radio":"radio","switch.fridge":"fridge"}
+    # Written by the smart_power app; do not edit by hand.
+    max: 255
+    initial: "{}"

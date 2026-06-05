@@ -14,6 +14,16 @@ import 'package:hugeicons/hugeicons.dart';
 class AppIcons {
   AppIcons._();
 
+  // ── Social / connect ─────────────────────────────────────────────
+  static const instagram = HugeIcons.strokeRoundedInstagram;
+  static const twitterX = HugeIcons.strokeRoundedNewTwitter;
+  static const facebook = HugeIcons.strokeRoundedFacebook01;
+  static const youtube = HugeIcons.strokeRoundedYoutube;
+  static const whatsapp = HugeIcons.strokeRoundedWhatsapp;
+  static const support = HugeIcons.strokeRoundedCustomerSupport;
+  static const login = HugeIcons.strokeRoundedLogin03;
+  static const register = HugeIcons.strokeRoundedUserAdd01;
+
   // ── Navigation / bottom-nav ──────────────────────────────────────
   static const home = HugeIcons.strokeRoundedHome05;
   static const devices = HugeIcons.strokeRoundedSmartPhone02;
@@ -54,6 +64,8 @@ class AppIcons {
   static const current = HugeIcons.strokeRoundedActivity01;
   static const energy = HugeIcons.strokeRoundedChart01;
   static const trend = HugeIcons.strokeRoundedChartIncrease;
+  static const download = HugeIcons.strokeRoundedDownload04;
+  static const document = HugeIcons.strokeRoundedInvoice01;
 
   // ── Inline arrows for delta pills ────────────────────────────────
   static const arrowUp = HugeIcons.strokeRoundedArrowUp01;

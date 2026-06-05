@@ -1,0 +1,21 @@
+# Plug Assistance gateway — companion service on the Pi, alongside Home Assistant.
+#
+# Host networking lets the gateway reach HA at http://localhost:8123 with the
+# least fuss. IMPORTANT: host networking publishes port 8099 on ALL interfaces,
+# so you MUST restrict it with the host firewall to the LAN / Tailscale only —
+# do not port-forward it publicly (see deploy/gateway/README.md).
+#
+# Merge this into the Pi's compose file (or run standalone with
+# `docker compose -f docker-compose.snippet.yml up -d`).
+
+services:
+  plug-gateway:
+    build: ../../services/plug-gateway
+    image: plug-gateway:latest
+    container_name: plug-gateway
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - ./gateway.env # copy of services/plug-gateway/.env.example with real values (gitignored)
+    volumes:
+      - /home/smart/plug-gateway/data:/data

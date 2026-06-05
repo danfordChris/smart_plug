@@ -21,9 +21,10 @@ class SettingsScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final settings = ref.watch(settingsProvider).valueOrNull;
     final plugs = ref.watch(plugsProvider).valueOrNull ?? const [];
-    final url = settings?.haUrl ?? 'http://100.83.45.15:8123';
+    final url = settings?.gatewayUrl ?? 'http://100.83.45.15:8099';
     final pollSeconds = settings?.pollSeconds ?? 10;
-    final tokenTail = _tokenTail(settings?.haToken);
+    final email = settings?.email ?? '—';
+    final role = (settings?.role ?? 'user') == 'admin' ? 'Administrator' : 'Member';
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -45,10 +46,9 @@ class SettingsScreen extends ConsumerWidget {
               ),
               _divider(scheme),
               _SettingsRow(
-                icon: AppIcons.key,
-                title: 'Access token',
-                subtitle: '•••• •••• •••• $tokenTail',
-                subtitleMono: true,
+                icon: AppIcons.profile,
+                title: 'Signed in as',
+                subtitle: '$email · $role',
               ),
               _divider(scheme),
               _SettingsRow(
@@ -108,7 +108,7 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
-          // ── Forget ───────────────────────────────────────────────
+          // ── Log out ──────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
             child: OutlinedButton(
@@ -120,18 +120,13 @@ class SettingsScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(AppRadii.button),
                 ),
               ),
-              onPressed: () => _confirmForget(context, ref),
-              child: const Text('Forget instance & sign out'),
+              onPressed: () => _confirmLogout(context, ref),
+              child: const Text('Log out'),
             ),
           ),
         ],
       ),
     );
-  }
-
-  static String _tokenTail(String? token) {
-    if (token == null || token.length < 4) return '8f3a';
-    return token.substring(token.length - 4);
   }
 
   Widget _divider(ColorScheme scheme) => Divider(
@@ -141,13 +136,13 @@ class SettingsScreen extends ConsumerWidget {
         color: scheme.outlineVariant,
       );
 
-  Future<void> _confirmForget(BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Forget this instance?'),
+        title: const Text('Log out?'),
         content: const Text(
-          "You'll need to paste the URL and a fresh long-lived token again to reconnect.",
+          "You'll need to sign in again to control your plugs.",
         ),
         actions: [
           TextButton(
@@ -156,13 +151,13 @@ class SettingsScreen extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Forget'),
+            child: const Text('Log out'),
           ),
         ],
       ),
     );
     if (ok == true) {
-      await ref.read(settingsProvider.notifier).forgetInstance();
+      await ref.read(settingsProvider.notifier).logout();
     }
   }
 }

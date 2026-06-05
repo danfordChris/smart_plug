@@ -5,20 +5,21 @@
 class AppConstants {
   AppConstants._();
 
-  /// Default Plug Assistance URL prefilled on the Setup screen.
-  /// Resolves to the operator's Tailscale VPN address.
-  static const String haDefaultUrl = 'http://100.83.45.15:8123';
-
-  /// Fallback LAN URL — shown as a hint in the Setup field.
-  static const String haLanUrl = 'http://192.168.1.19:8123';
-
-  /// Default long-lived access token, prefilled on the Setup screen so the
-  /// operator doesn't have to copy/paste it during development.
+  /// Default Plug Assistance gateway URL prefilled on the login screen.
+  /// The gateway holds the Home Assistant token server-side — the app never
+  /// sees it; users authenticate here and receive a per-user token.
   ///
-  /// TODO(security): remove before shipping — a baked-in token is a dev-only
-  /// convenience. Rotate this token in Plug Assistance once no longer needed.
-  static const String haDefaultToken =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI3OWI4OWNlZjZhNGI0OWYxOTRlOTFjZDQxZDg1M2ViMyIsImlhdCI6MTc3OTcyMjk4OSwiZXhwIjoyMDk1MDgyOTg5fQ.Sfcg_rIlX1Mkf6Ewn9S35F-toMn-o-i65WBeFxFcvy0';
+  /// TEMP (dev): points at the gateway running on the developer Mac. On the iOS
+  /// Simulator, 127.0.0.1 is the Mac itself. The gateway then reaches the Pi
+  /// over Tailscale server-side. For production, run the gateway on the Pi and
+  /// set this to `http://100.83.45.15:8099`.
+  ///   - iOS Simulator:    http://127.0.0.1:8099
+  ///   - Android Emulator: http://10.0.2.2:8099
+  ///   - Physical device:  http://100.104.116.120:8099 (Tailscale) or :192.168.1.115
+  static const String gatewayDefaultUrl = 'http://127.0.0.1:8099';
+
+  /// Fallback URL hint shown on the login screen (this Mac over Tailscale).
+  static const String gatewayLanUrl = 'http://100.104.116.120:8099';
 
   /// Polling cadence for plug state refresh when WebSocket is unused.
   /// Handoff §6 — Timer.periodic(Duration(seconds: 10)).
@@ -27,9 +28,39 @@ class AppConstants {
   /// Network request timeout (Handoff §4.1).
   static const Duration httpTimeout = Duration(seconds: 5);
 
+  /// Electricity tariff used for EVERY cost estimate shown in the app.
+  /// 1 kWh == [tariffPerKwh] [currencySymbol]. Change these two values to
+  /// re-price the whole app — no other file hardcodes a rate or currency.
+  static const double tariffPerKwh = 500; // Tanzanian Shillings per kWh
+  static const String currencySymbol = 'TSh';
+
+  // ─── Bill / "View report" PDF ──────────────────────────────────────────
+  // Issuer details printed on the generated electricity-bill PDF.
+  static const String billCompanyName = 'Smart Power Technologies Ltd';
+  static const List<String> billCompanyAddressLines = [
+    '407 Nganana, 24311 Kikwe, Arumeru',
+    'P.O. BOX 475, Arusha',
+  ];
+  static const String billCompanyEmail = 'dg@spt.co.tz';
+  static const String billCompanyPhone = '0764971665';
+  static const String billServiceAddress =
+      '29 Salia Street, Dar es Salaam, Tanzania';
+
+  /// Fixed monthly service charge added to every bill.
+  static const double billServiceCharge = 5000;
+
+  /// VAT applied to (energy + service) charges.
+  static const double billVatRate = 0.18; // 18%
+
+  /// Prefix for generated receipt / transaction references.
+  static const String billReceiptPrefix = 'SPT';
+
   /// Secure storage keys.
-  static const String storageKeyUrl = 'ha_url';
-  static const String storageKeyToken = 'ha_token';
+  static const String storageKeyGatewayUrl = 'gateway_url';
+  static const String storageKeyAccessToken = 'access_token';
+  static const String storageKeyRefreshToken = 'refresh_token';
+  static const String storageKeyEmail = 'user_email';
+  static const String storageKeyRole = 'user_role';
   static const String storageKeyThemeMode = 'theme_mode';
   static const String storageKeyPollSeconds = 'poll_seconds';
 }

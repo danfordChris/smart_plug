@@ -45,5 +45,16 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- DEV: the Plug Assistance gateway is reached over plain HTTP on the LAN /
+	     Tailscale. iOS App Transport Security blocks cleartext by default, so we
+	     allow it here. For production, serve the gateway over HTTPS and remove
+	     NSAllowsArbitraryLoads (or scope it to the gateway host). -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

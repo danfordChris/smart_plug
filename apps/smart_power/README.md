@@ -38,14 +38,31 @@ network or Tailscale VPN. There is no cloud backend.
 
 ---
 
-## Generating a Plug Assistance token
+## Signing in (auth gateway)
 
-1. Open Plug Assistance in a browser.
-2. Click your **profile** (bottom-left avatar).
-3. Go to **Security → Long-Lived Access Tokens → Create Token**.
-4. Name it `Smart Power`.
-5. Copy the token immediately — Plug Assistance only shows it once.
-6. Paste it into the app's Setup screen.
+The app no longer holds a Home Assistant token. It logs in to the **Plug Assistance
+gateway** (`services/plug-gateway/`), which issues a per-user token and forwards requests to
+Home Assistant using a token held server-side. Start that gateway first — see
+`services/plug-gateway/README.md` → *Local development & testing*.
+
+**Test account** (the first account created becomes an active admin):
+
+| Field | Value |
+|-------|-------|
+| Email | `owner@home.test` |
+| Password | `ownerpass123` |
+
+On the login screen, set the **Gateway server** URL for your platform:
+
+| App runs on | Gateway URL |
+|-------------|-------------|
+| iOS Simulator | `http://127.0.0.1:8099` |
+| Android Emulator | `http://10.0.2.2:8099` |
+| Physical device (Tailnet) | `http://<dev-machine-tailscale-ip>:8099` |
+
+Then log in with the test account above. Keep **Tailscale up** on the dev machine so the
+gateway can reach the Pi. (The gateway URL also has a prefilled default in
+`lib/config/constants.dart`.)
 
 ---
 
@@ -69,8 +86,9 @@ For Android:
 flutter run -d android
 ```
 
-The first launch shows the Setup screen. Default URL is `http://100.83.45.15:8123`
-(the operator's Tailscale-routed Raspberry Pi). Change it if needed.
+The first launch shows the **login screen**. Log in with the test account above (or sign
+up). The **Gateway server** URL is prefilled from `AppConstants.gatewayDefaultUrl` — adjust
+it for your platform (see *Signing in* above). The gateway must be running.
 
 ---
 
