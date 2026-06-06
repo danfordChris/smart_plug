@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../config/app_icons.dart';
+import '../config/images.dart';
 import '../config/theme.dart';
 import '../utils/snackbars.dart' show AppSnack;
 import 'auth_screen.dart';
@@ -14,9 +15,7 @@ class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
 
   void _openAuth(BuildContext context, {required bool signup}) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => AuthScreen(startWithSignUp: signup)),
-    );
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => AuthScreen(startWithSignUp: signup)));
   }
 
   @override
@@ -33,14 +32,9 @@ class WelcomeScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(0, AppSpacing.s, AppSpacing.l, 0),
                 child: ActionChip(
-                  avatar: HugeIcon(
-                    icon: AppIcons.eye,
-                    size: 16,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  avatar: HugeIcon(icon: AppIcons.eye, size: 16, color: scheme.onSurfaceVariant),
                   label: const Text('Preview'),
-                  onPressed: () =>
-                      ref.read(previewModeProvider.notifier).state = true,
+                  onPressed: () => ref.read(previewModeProvider.notifier).state = true,
                   backgroundColor: scheme.surfaceContainerHigh,
                   side: BorderSide(color: scheme.outlineVariant),
                 ),
@@ -52,25 +46,20 @@ class WelcomeScreen extends ConsumerWidget {
                 child: Column(
                   children: [
                     const SizedBox(height: AppSpacing.xl),
-                    _emblem(scheme),
+                    Image.asset(Images.logo, fit: BoxFit.scaleDown, height: MediaQuery.of(context).size.height * 0.15),
                     const SizedBox(height: AppSpacing.xl),
                     // Brand: light top word + bold bottom word.
                     Text(
                       'SMART',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w300,
-                            letterSpacing: 6,
-                            color: scheme.onSurface,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w300, letterSpacing: 6, color: scheme.onSurface),
                     ),
                     Text(
                       'POWER',
-                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2,
-                            color: scheme.onSurface,
-                            height: 1.05,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: 2, color: scheme.onSurface, height: 1.05),
                     ),
                     const SizedBox(height: AppSpacing.l),
                     _taglinePill(context, scheme),
@@ -86,10 +75,7 @@ class WelcomeScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.l),
                     Text(
                       'Connect With Us',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: AppSpacing.m),
                     _socials(context, scheme),
@@ -105,39 +91,15 @@ class WelcomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _emblem(ColorScheme scheme) {
-    return Container(
-      width: 104,
-      height: 104,
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        shape: BoxShape.circle,
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.4), width: 2),
-      ),
-      child: Center(
-        child: HugeIcon(
-          icon: AppIcons.bolt,
-          size: 52,
-          color: scheme.onPrimaryContainer,
-        ),
-      ),
-    );
-  }
-
   Widget _taglinePill(BuildContext context, ColorScheme scheme) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(28),
-      ),
+      decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(28)),
       child: Text(
         'Your smart energy companion',
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
       ),
     );
   }
@@ -152,9 +114,7 @@ class WelcomeScreen extends ConsumerWidget {
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(56),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadii.button),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.button)),
         ),
       ),
     );
@@ -172,9 +132,7 @@ class WelcomeScreen extends ConsumerWidget {
           foregroundColor: scheme.primary,
           side: BorderSide(color: scheme.primary.withValues(alpha: 0.6)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadii.button),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.button)),
         ),
       ),
     );
@@ -186,13 +144,7 @@ class WelcomeScreen extends ConsumerWidget {
         Expanded(child: Divider(color: scheme.outlineVariant)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'OR',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  letterSpacing: 1,
-                ),
-          ),
+          child: Text('OR', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 1)),
         ),
         Expanded(child: Divider(color: scheme.outlineVariant)),
       ],
@@ -236,18 +188,9 @@ class WelcomeScreen extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          HugeIcon(
-            icon: HugeIcons.strokeRoundedCopyright,
-            size: 12,
-            color: scheme.onSurfaceVariant,
-          ),
+          HugeIcon(icon: HugeIcons.strokeRoundedCopyright, size: 12, color: scheme.onSurfaceVariant),
           const SizedBox(width: 4),
-          Text(
-            '${DateTime.now().year} · Plug Assistance',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-          ),
+          Text('${DateTime.now().year} · Plug Assistance', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
         ],
       ),
     );

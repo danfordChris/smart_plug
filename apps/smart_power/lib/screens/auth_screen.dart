@@ -4,6 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../config/app_icons.dart';
 import '../config/constants.dart';
+import '../config/images.dart';
 import '../config/theme.dart';
 import '../providers/settings_provider.dart';
 import '../services/auth_api.dart';
@@ -15,6 +16,7 @@ import 'root_gate.dart';
 class AuthScreen extends ConsumerStatefulWidget {
   /// Opens the form pre-selected on Sign up instead of Log in.
   final bool startWithSignUp;
+
   const AuthScreen({super.key, this.startWithSignUp = false});
 
   @override
@@ -187,14 +189,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
-            child: Center(
-              child: HugeIcon(icon: AppIcons.bolt, size: 32, color: scheme.onPrimaryContainer),
-            ),
-          ),
+          Image.asset(Images.logo, fit: BoxFit.scaleDown, height: MediaQuery.of(context).size.height * 0.15),
+
           const SizedBox(height: AppSpacing.l),
           Text(
             _mode == _Mode.signup ? 'Create your account' : 'Welcome back',
