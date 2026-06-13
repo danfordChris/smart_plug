@@ -1,12 +1,12 @@
 # Plug Assistance gateway — companion service on the Pi, alongside Home Assistant.
 #
 # Host networking lets the gateway reach HA at http://localhost:8123 with the
-# least fuss. IMPORTANT: host networking publishes port 8099 on ALL interfaces,
-# so you MUST restrict it with the host firewall to the LAN / Tailscale only —
-# do not port-forward it publicly (see deploy/gateway/README.md).
+# least fuss. Port 8099 stays on localhost/LAN; the ONLY public entry is the
+# Cloudflare Tunnel below (outbound-only, no router port-forwarding).
 #
 # Merge this into the Pi's compose file (or run standalone with
 # `docker compose -f docker-compose.snippet.yml up -d`).
+# Secrets (HA_TOKEN, JWT_SECRET, TUNNEL_TOKEN) live in ./gateway.env (gitignored).
 
 services:
   plug-gateway:
@@ -19,3 +19,17 @@ services:
       - ./gateway.env # copy of services/plug-gateway/.env.example with real values (gitignored)
     volumes:
       - /home/smart/plug-gateway/data:/data
+
+  # Public HTTPS entry on a SUBDOMAIN (e.g. gateway.<your-domain>) via Cloudflare
+  # Tunnel. Create a tunnel in the Cloudflare Zero Trust dashboard, add a Public
+  # Hostname (Subdomain=gateway, Domain=<your-domain>, Service=HTTP localhost:8099),
+  # copy the tunnel TOKEN into gateway.env as TUNNEL_TOKEN. DNS for the subdomain
+  # is created automatically. See deploy/gateway/DOMAIN-SETUP.md.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    network_mode: host
+    command: tunnel --no-autoupdate run
+    env_file:
+      - ./gateway.env # must contain TUNNEL_TOKEN=<your cloudflare tunnel token>

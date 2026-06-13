@@ -4,8 +4,12 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../config/app_icons.dart';
 import '../config/theme.dart';
+import '../models/diagnosis.dart';
 import '../models/plug.dart';
+import '../models/usage.dart';
+import '../providers/diagnosis_provider.dart';
 import '../providers/plugs_provider.dart';
+import '../providers/usage_provider.dart';
 import '../utils/formatters.dart';
 import '../widgets/insight_card.dart';
 import '../widgets/smart_bottom_nav.dart';
@@ -20,7 +24,6 @@ class InsightsScreen extends ConsumerWidget {
   const InsightsScreen({super.key});
 
   // Recommendation tints (oklch → sRGB) from screens.jsx lines 902-933.
-  static const Color _tintMaintain = Color(0xFFC2602B); // oklch(0.6 0.16 30)
   static const Color _tintSchedule = Color(0xFF5A6FE0); // oklch(0.55 0.13 250)
   static const Color _tintLoss = Color(0xFFD8A12B); // oklch(0.6 0.16 60)
 
@@ -28,8 +31,10 @@ class InsightsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final plugs = ref.watch(plugsProvider).valueOrNull ?? const <Plug>[];
-    final weekly = _syntheticWeek(plugs);
-    final todayIndex = DateTime.now().weekday - 1;
+    final period = ref.watch(usagePeriodProvider);
+    // Real series when signed in; synthetic fallback keeps the chart populated.
+    final series = ref.watch(usageProvider(period)).valueOrNull ??
+        syntheticUsage(period, plugs);
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -43,64 +48,88 @@ class InsightsScreen extends ConsumerWidget {
         ),
         physics: const BouncingScrollPhysics(),
         children: [
-          _weeklyCard(context, weekly, todayIndex),
+          _usageCard(context, ref, series),
           const SizedBox(height: AppSpacing.l),
-          const SectionHeader(title: 'Top appliances today'),
+          SectionHeader(title: 'Top appliances ${period.noun}'),
           const SizedBox(height: AppSpacing.s),
-          _breakdownCard(context, plugs),
+          _breakdownCard(context, plugs, series),
           const SizedBox(height: AppSpacing.l),
           const SectionHeader(title: 'Recommendations'),
           const SizedBox(height: AppSpacing.s),
-          InsightCard(
-            icon: AppIcons.wrench,
-            tint: _tintMaintain,
-            title: 'Predictive maintenance',
-            description:
-                'Fridge compressor cycle drifting slightly longer. Service within 30 days.',
-            action: 'High',
-            actionColor: _tintMaintain,
-          ),
-          const SizedBox(height: 8),
-          InsightCard(
-            icon: AppIcons.schedule,
-            tint: _tintSchedule,
-            title: 'Schedule suggestion',
-            description: 'Run heavy loads 00:30 – 04:30 to use off-peak tariff.',
-            action: 'Save 250 TSh',
-            actionColor: _tintSchedule,
-          ),
-          const SizedBox(height: 8),
-          InsightCard(
-            icon: AppIcons.bolt,
-            tint: _tintLoss,
-            title: 'Energy loss detected',
-            description:
-                'Standby power loss of 0.8 kWh/day detected across all devices.',
-            action: 'Check now',
-            actionColor: _tintLoss,
-          ),
-          const SizedBox(height: 8),
-          InsightCard(
-            icon: AppIcons.leaf,
-            tint: scheme.primary,
-            title: 'Optimization tip',
-            description:
-                'Setting fridge to 4°C can save up to 8% energy without affecting freshness.',
-            action: 'Learn more',
-            actionColor: scheme.primary,
-          ),
+          ..._recommendations(context, ref, plugs),
         ],
       ),
     );
   }
 
-  Widget _weeklyCard(
-    BuildContext context,
-    List<double> weekly,
-    int todayIndex,
-  ) {
+  static String _periodHeader(UsagePeriod p) {
+    switch (p) {
+      case UsagePeriod.original:
+        return 'OVERVIEW';
+      case UsagePeriod.day:
+        return 'TODAY';
+      default:
+        return 'THIS ${p.label.toUpperCase()}';
+    }
+  }
+
+  /// Real, diagnosis-derived recommendations when signed in; the curated tips
+  /// otherwise (demo/preview) so the section is never empty.
+  List<Widget> _recommendations(BuildContext context, WidgetRef ref, List<Plug> plugs) {
     final scheme = Theme.of(context).colorScheme;
-    final totalKwh = weekly.fold<double>(0, (a, b) => a + b);
+    final flagged = ref.watch(flaggedDiagnosesProvider).valueOrNull ?? const <Diagnosis>[];
+    final nameByEntity = {for (final p in plugs) p.entityId: p.name};
+
+    if (flagged.isNotEmpty) {
+      Color tint(String sev) => sev == 'critical'
+          ? scheme.error
+          : sev == 'warning'
+              ? _tintLoss
+              : _tintSchedule;
+      final cards = <Widget>[];
+      for (final d in flagged) {
+        final name = nameByEntity[d.entityId] ?? d.entityId.split('.').last;
+        cards.add(InsightCard(
+          icon: d.severity == 'info' ? AppIcons.leaf : AppIcons.wrench,
+          tint: tint(d.severity),
+          title: name,
+          description: d.explanation,
+          action: d.statusLabel,
+          actionColor: tint(d.severity),
+        ));
+        cards.add(const SizedBox(height: 8));
+      }
+      if (cards.isNotEmpty) cards.removeLast();
+      return cards;
+    }
+
+    // No live issues (or not signed in) → keep a couple of generic tips.
+    return [
+      InsightCard(
+        icon: AppIcons.check,
+        tint: scheme.primary,
+        title: 'All appliances healthy',
+        description:
+            'No faults, abnormal draw, or cost spikes detected across your plugs.',
+        action: 'Good',
+        actionColor: scheme.primary,
+      ),
+      const SizedBox(height: 8),
+      InsightCard(
+        icon: AppIcons.leaf,
+        tint: scheme.primary,
+        title: 'Optimization tip',
+        description:
+            'Setting a fridge to 4°C can save up to 8% energy without affecting freshness.',
+        action: 'Learn more',
+        actionColor: scheme.primary,
+      ),
+    ];
+  }
+
+  Widget _usageCard(BuildContext context, WidgetRef ref, UsageSeries series) {
+    final scheme = Theme.of(context).colorScheme;
+    final totalKwh = series.totalKwh;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -117,12 +146,43 @@ class InsightsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'THIS WEEK',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            letterSpacing: 0.5,
-                          ),
+                    // Period filter lives here (replaces the static "THIS WEEK").
+                    DropdownButtonHideUnderline(
+                      child: DropdownButton<UsagePeriod>(
+                        value: series.period,
+                        isDense: true,
+                        borderRadius: BorderRadius.circular(AppRadii.card),
+                        icon: Icon(Icons.keyboard_arrow_down_rounded,
+                            size: 18, color: scheme.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              letterSpacing: 0.5,
+                            ),
+                        selectedItemBuilder: (context) => UsagePeriod.values
+                            .map((p) => Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    _periodHeader(series.period),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(
+                                          color: scheme.onSurfaceVariant,
+                                          letterSpacing: 0.5,
+                                        ),
+                                  ),
+                                ))
+                            .toList(),
+                        items: [
+                          for (final p in UsagePeriod.values)
+                            DropdownMenuItem(value: p, child: Text(p.label)),
+                        ],
+                        onChanged: (p) {
+                          if (p != null) {
+                            ref.read(usagePeriodProvider.notifier).state = p;
+                          }
+                        },
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Row(
@@ -174,8 +234,9 @@ class InsightsScreen extends ConsumerWidget {
           SizedBox(
             height: 130,
             child: WeeklyBarChart(
-              dailyKwh: weekly,
-              todayIndex: todayIndex,
+              dailyKwh: series.values,
+              todayIndex: series.currentIndex,
+              labels: series.labels,
             ),
           ),
         ],
@@ -183,12 +244,14 @@ class InsightsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _breakdownCard(BuildContext context, List<Plug> plugs) {
+  Widget _breakdownCard(BuildContext context, List<Plug> plugs, UsageSeries series) {
     final scheme = Theme.of(context).colorScheme;
-    final sorted = [...plugs]
-      ..sort((a, b) =>
-          (b.energyTodayKwh ?? 0).compareTo(a.energyTodayKwh ?? 0));
-    final total = sorted.fold<double>(0, (a, p) => a + (p.energyTodayKwh ?? 0));
+    // Per-plug kWh for the selected period (from the series' by_entity totals),
+    // falling back to today's energy when no period totals are available.
+    double kwhFor(Plug p) =>
+        series.byEntity[p.entityId] ?? (p.energyTodayKwh ?? 0);
+    final sorted = [...plugs]..sort((a, b) => kwhFor(b).compareTo(kwhFor(a)));
+    final total = sorted.fold<double>(0, (a, p) => a + kwhFor(p));
     final safeTotal = total > 0 ? total : 1.0;
 
     return Container(
@@ -203,7 +266,8 @@ class InsightsScreen extends ConsumerWidget {
             _breakdownRow(
               context,
               sorted[i],
-              ((sorted[i].energyTodayKwh ?? 0) / safeTotal * 100).round(),
+              kwhFor(sorted[i]),
+              (kwhFor(sorted[i]) / safeTotal * 100).round(),
               hasDivider: i < sorted.length - 1,
             ),
           if (sorted.isEmpty)
@@ -225,6 +289,7 @@ class InsightsScreen extends ConsumerWidget {
   Widget _breakdownRow(
     BuildContext context,
     Plug p,
+    double kwh,
     int pct, {
     required bool hasDivider,
   }) {
@@ -274,7 +339,7 @@ class InsightsScreen extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      Fmt.energy(p.energyTodayKwh),
+                      Fmt.energy(kwh),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                             fontFeatures: const [FontFeature.tabularFigures()],
@@ -311,13 +376,6 @@ class InsightsScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  List<double> _syntheticWeek(List<Plug> plugs) {
-    final today = plugs.fold<double>(0, (a, p) => a + (p.energyTodayKwh ?? 0));
-    // Match app.jsx weekHistory seed shape (Mon..Sun, today last).
-    final seed = [16.4, 18.1, 15.2, 19.8, 17.6, 14.5, today + 17.1];
-    return seed;
   }
 
   static dynamic _glyphFor(ApplianceType t) {

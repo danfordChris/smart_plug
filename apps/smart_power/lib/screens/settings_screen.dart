@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../config/app_icons.dart';
+import '../config/constants.dart';
 import '../config/theme.dart';
 import '../providers/plugs_provider.dart';
 import '../providers/settings_provider.dart';
@@ -21,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final settings = ref.watch(settingsProvider).valueOrNull;
     final plugs = ref.watch(plugsProvider).valueOrNull ?? const [];
-    final url = settings?.gatewayUrl ?? 'http://100.83.45.15:8099';
+    final url = settings?.gatewayUrl ?? AppConstants.gatewayDefaultUrl;
     final pollSeconds = settings?.pollSeconds ?? 10;
     final email = settings?.email ?? '—';
     final role = (settings?.role ?? 'user') == 'admin' ? 'Administrator' : 'Member';

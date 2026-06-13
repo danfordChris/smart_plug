@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/theme.dart';
+import '../providers/alert_watcher.dart';
 import '../widgets/smart_bottom_nav.dart';
 import 'dashboard_screen.dart';
 import 'detail_screen.dart';
@@ -55,6 +56,9 @@ class _HomeScaffoldState extends ConsumerState<HomeScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep the alert watcher alive while the authed shell is mounted: it polls
+    // the gateway feed and raises system notifications for new alerts.
+    ref.watch(alertWatcherProvider);
     final pages = [
       DashboardScreen(
         onOpenInsights: () => _select(3),

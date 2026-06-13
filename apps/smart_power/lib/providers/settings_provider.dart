@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/plug.dart';
 import '../services/auth_api.dart';
+import '../services/push.dart';
 import '../services/storage.dart';
 
 final secureStorageProvider = Provider<SecureStorage>((_) => SecureStorage());
@@ -13,7 +14,12 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   @override
   Future<AppSettings> build() async {
     final storage = ref.read(secureStorageProvider);
-    return storage.load();
+    final loaded = await storage.load();
+    // Re-register for push on cold start when a session is already stored.
+    if (loaded.isConfigured) {
+      PushService.registerWith(loaded.gatewayUrl!, loaded.accessToken!);
+    }
+    return loaded;
   }
 
   /// Persists a freshly authenticated session (login).
@@ -33,6 +39,8 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     );
     await storage.save(next);
     state = AsyncData(next);
+    // Register this device for push now that we have a session.
+    PushService.registerWith(gatewayUrl, session.accessToken);
   }
 
   /// Exchanges the stored refresh token for a new access token. Returns the
@@ -84,6 +92,8 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   /// and routes the user back to the login screen.
   Future<void> logout() async {
     final current = state.valueOrNull;
+    // Drop this device's push registration before clearing the session.
+    await PushService.unregister();
     if (current?.gatewayUrl != null && current?.refreshToken != null) {
       final api = AuthApi(baseUrl: current!.gatewayUrl!);
       await api.logout(current.refreshToken!);

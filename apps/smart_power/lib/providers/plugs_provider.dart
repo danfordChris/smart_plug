@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/demo_data.dart';
+import '../models/device_config.dart';
 import '../models/ha_state.dart';
 import '../models/plug.dart';
 import '../services/ha_api.dart';
+import 'device_config_provider.dart';
 import 'settings_provider.dart';
 
 /// Where the plug list currently comes from. Lets the UI tell the difference
@@ -99,6 +101,17 @@ class PlugsNotifier extends AsyncNotifier<List<Plug>> {
       return DemoData.plugs();
     }
     _setSource(PlugsSource.live);
+    // Apply per-user display overrides (rename / appliance type). Failures here
+    // must never break the live plug list, so swallow and use the raw plugs.
+    try {
+      final configApi = ref.read(deviceConfigApiProvider);
+      if (configApi != null) {
+        final configs = await configApi.list();
+        return applyDeviceOverrides(assembled, configs);
+      }
+    } catch (_) {
+      // ignore — overrides are best-effort
+    }
     return assembled;
   }
 

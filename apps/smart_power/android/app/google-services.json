@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "812253572149",
+    "project_id": "device-streaming-7c6df5f4",
+    "storage_bucket": "device-streaming-7c6df5f4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:812253572149:android:c99e41a1897b503c15d57c",
+        "android_client_info": {
+          "package_name": "com.smartplug.smart_power"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsb7SHos4ovjs1Q5NvZyutpINYblNFUcc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -13,13 +13,14 @@ class AppConstants {
   /// Simulator, 127.0.0.1 is the Mac itself. The gateway then reaches the Pi
   /// over Tailscale server-side. For production, run the gateway on the Pi and
   /// set this to `http://100.83.45.15:8099`.
-  ///   - iOS Simulator:    http://127.0.0.1:8099
-  ///   - Android Emulator: http://10.0.2.2:8099
-  ///   - Physical device:  http://100.104.116.120:8099 (Tailscale) or :192.168.1.115
-  static const String gatewayDefaultUrl = 'http://127.0.0.1:8099';
+  /// Defaults to the public production gateway (Cloudflare Tunnel → Pi). Works
+  /// from anywhere over HTTPS, no VPN. Override at build/run time if needed:
+  ///   flutter run --dart-define=GATEWAY_URL=http://127.0.0.1:8099        (local dev)
+  ///   flutter build appbundle --dart-define=GATEWAY_URL=https://gateway.danfordchris.dev
+  static const String gatewayDefaultUrl = String.fromEnvironment('GATEWAY_URL', defaultValue: 'https://gateway.danfordchris.dev');
 
-  /// Fallback URL hint shown on the login screen (this Mac over Tailscale).
-  static const String gatewayLanUrl = 'http://100.104.116.120:8099';
+  /// Local-dev gateway hint (e.g. iOS Simulator) shown on the login screen.
+  static const String gatewayLanUrl = 'http://127.0.0.1:8099';
 
   /// Polling cadence for plug state refresh when WebSocket is unused.
   /// Handoff §6 — Timer.periodic(Duration(seconds: 10)).
@@ -37,14 +38,10 @@ class AppConstants {
   // ─── Bill / "View report" PDF ──────────────────────────────────────────
   // Issuer details printed on the generated electricity-bill PDF.
   static const String billCompanyName = 'Smart Power Technologies Ltd';
-  static const List<String> billCompanyAddressLines = [
-    '407 Nganana, 24311 Kikwe, Arumeru',
-    'P.O. BOX 475, Arusha',
-  ];
+  static const List<String> billCompanyAddressLines = ['407 Nganana, 24311 Kikwe, Arumeru', 'P.O. BOX 475, Arusha'];
   static const String billCompanyEmail = 'dg@spt.co.tz';
   static const String billCompanyPhone = '0764971665';
-  static const String billServiceAddress =
-      '29 Salia Street, Dar es Salaam, Tanzania';
+  static const String billServiceAddress = '29 Salia Street, Dar es Salaam, Tanzania';
 
   /// Fixed monthly service charge added to every bill.
   static const double billServiceCharge = 5000;

@@ -1,13 +1,14 @@
-"""Admin: list/approve/disable users, mint invite codes."""
+"""Admin: list/approve/disable users, mint invite codes, retrain ML models."""
 import secrets
 from datetime import timedelta
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlmodel import Session, select
 
 from ..db import get_session
 from ..deps import require_admin
+from ..ml import dataset, registry, train
 from ..models import Invite, RefreshToken, User, now_utc
 from ..schemas import InviteOut, UserOut
 
@@ -97,3 +98,28 @@ def create_invite(
     session.add(invite)
     session.commit()
     return InviteOut(code=code, expires_at=expires_at)
+
+
+# ─── ML model management ───────────────────────────────────────────────────
+@router.post("/ml/retrain")
+def ml_retrain(request: Request, _admin: User = Depends(require_admin)):
+    """Retrain the diagnosis bundle from synthetic signatures + the user's own
+    telemetry (weak-labelled by appliance type), then hot-reload it. Sync def →
+    runs in a threadpool, so the event loop isn't blocked."""
+    settings = request.app.state.settings
+    engine = request.app.state.engine
+    real_samples, real_normals = dataset.build_real_training_data(engine)
+    summary = train.train(
+        settings.ml_models_dir,
+        real_samples=real_samples,
+        real_normals=real_normals,
+    )
+    request.app.state.ml_bundle = registry.load_bundle(settings.ml_models_dir)
+    return {"status": "trained", "loaded": request.app.state.ml_bundle is not None, **summary}
+
+
+@router.post("/ml/reload")
+def ml_reload(request: Request, _admin: User = Depends(require_admin)):
+    settings = request.app.state.settings
+    request.app.state.ml_bundle = registry.load_bundle(settings.ml_models_dir)
+    return {"loaded": request.app.state.ml_bundle is not None}

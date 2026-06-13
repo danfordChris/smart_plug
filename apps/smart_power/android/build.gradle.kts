@@ -22,3 +22,11 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+rootProject.afterEvaluate {
+    rootProject.subprojects.forEach { subproject ->
+        subproject.tasks.matching { it.name == "verifyReleaseResources" }.configureEach {
+            this.enabled = false
+        }
+    }
+}

@@ -83,7 +83,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       }
       final session = await api.login(email: email, password: password);
       await ref.read(settingsProvider.notifier).saveSession(gatewayUrl: gatewayUrl, session: session, email: email);
-      // RootGate reacts to the new session and swaps to the dashboard.
+      // This form was pushed on top of RootGate by the Welcome screen, so the
+      // now-authenticated RootGate renders the dashboard underneath. Pop back
+      // to it so the dashboard is actually shown.
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {

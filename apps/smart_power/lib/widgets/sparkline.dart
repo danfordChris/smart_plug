@@ -129,8 +129,8 @@ class DetailSparkline extends StatelessWidget {
 
 /// Weekly bar chart (Handoff §5). 7 bars, today highlighted.
 class WeeklyBarChart extends StatelessWidget {
-  final List<double> dailyKwh; // length 7, Mon..Sun
-  final int todayIndex;
+  final List<double> dailyKwh; // arbitrary length (24 / 7 / 5 / 12 ...)
+  final int todayIndex; // index to highlight (current bucket)
   final List<String> labels;
 
   const WeeklyBarChart({
@@ -147,6 +147,14 @@ class WeeklyBarChart extends StatelessWidget {
         ? 1.0
         : dailyKwh.reduce((a, b) => a > b ? a : b);
     final maxY = maxV * 1.15 + 0.0001;
+    final count = dailyKwh.length;
+    // Adaptive bar width + label thinning so 24-bar (day) views stay legible.
+    final barW = count <= 7
+        ? 28.0
+        : count <= 12
+            ? 16.0
+            : 8.0;
+    final labelEvery = count <= 12 ? 1 : 3;
 
     return BarChart(
       BarChartData(
@@ -167,7 +175,7 @@ class WeeklyBarChart extends StatelessWidget {
               reservedSize: 22,
               getTitlesWidget: (v, _) {
                 final i = v.toInt();
-                if (i < 0 || i >= labels.length) {
+                if (i < 0 || i >= labels.length || i % labelEvery != 0) {
                   return const SizedBox.shrink();
                 }
                 return Padding(
@@ -194,7 +202,7 @@ class WeeklyBarChart extends StatelessWidget {
                 color: i == todayIndex
                     ? scheme.primary
                     : scheme.primary.withValues(alpha: 0.35),
-                width: 28,
+                width: barW,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(6),
                 ),

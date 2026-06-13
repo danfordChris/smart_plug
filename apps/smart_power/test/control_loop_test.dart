@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smart_power/models/ha_state.dart';
 import 'package:smart_power/models/plug.dart';
 import 'package:smart_power/services/ha_api.dart';
+import 'package:smart_power/providers/device_config_provider.dart';
 import 'package:smart_power/providers/plugs_provider.dart';
 import 'package:smart_power/providers/settings_provider.dart';
 
@@ -63,6 +64,9 @@ Future<({ProviderContainer c, List<Plug> plugs})> _ready(FakeHaApi fake) async {
     overrides: [
       settingsProvider.overrideWith(_ConfiguredSettings.new),
       haApiProvider.overrideWithValue(fake),
+      // The control loop doesn't exercise device-config; null it so the
+      // dashboard fetch never makes a real network call in tests.
+      deviceConfigApiProvider.overrideWithValue(null),
     ],
   );
   addTearDown(c.dispose);

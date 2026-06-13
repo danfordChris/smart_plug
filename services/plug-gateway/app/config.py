@@ -29,6 +29,33 @@ class Settings(BaseSettings):
     # SQLite location (mount on a persistent host volume in production).
     db_path: str = "./plug_gateway.db"
 
+    # Timezone the gateway interprets schedule times in (IANA name).
+    timezone: str = "Africa/Dar_es_Salaam"
+
+    # How often the device monitor evaluates idle auto-off / offline alerts.
+    monitor_seconds: int = 30
+
+    # Firebase Cloud Messaging (push). Point this at a service-account JSON on
+    # the host to enable closed-app push; leave empty to disable (the in-app
+    # alerts feed still works). project_id is read from the JSON if unset.
+    fcm_credentials_file: str = ""
+    fcm_project_id: str = ""
+
+    # Appliance-diagnosis ML.
+    # Where trained joblib model artifacts live (mounted /data volume on the Pi,
+    # so they survive container recreation).
+    ml_models_dir: str = "/data/models"
+    # Telemetry logging: keep raw rows this many days, roll older up to N-minute
+    # buckets, and cap rollups at this horizon. Keeps SQLite small on a Pi.
+    telemetry_retention_days: int = 7
+    rollup_minutes: int = 5
+    rollup_retention_days: int = 180
+    # Electricity tariff for cost diagnosis — mirror the app's AppConstants.
+    tariff_per_kwh: float = 500.0
+    currency_symbol: str = "TSh"
+    # How often the monitor runs diagnosis and raises alerts on new faults.
+    diagnosis_minutes: int = 15
+
 
 @lru_cache
 def get_settings() -> Settings:

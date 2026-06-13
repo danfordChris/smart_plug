@@ -1,0 +1,4 @@
+# Real gateway secrets live here on each host — never commit them.
+gateway.env
+*.env
+!*.env.example
